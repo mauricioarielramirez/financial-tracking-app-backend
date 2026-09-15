@@ -40,7 +40,9 @@ func writeError(w http.ResponseWriter, err error) {
 		writeJSON(w, http.StatusConflict, errorResponse{Error: err.Error()})
 	case errors.Is(err, domain.ErrAccountNameRequired),
 		errors.Is(err, domain.ErrAccountTypeInvalid),
-		errors.Is(err, domain.ErrAccountCurrencyRequired):
+		errors.Is(err, domain.ErrAccountCurrencyRequired),
+		errors.Is(err, domain.ErrSnapshotMissingBalance),
+		errors.Is(err, domain.ErrSnapshotMissingRate):
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
 	default:
 		log.Printf("error interno: %v", err)

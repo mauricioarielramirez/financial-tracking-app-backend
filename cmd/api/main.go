@@ -22,6 +22,7 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/repository/sqlite"
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/usecase/account"
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/usecase/quote"
+	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/usecase/snapshot"
 )
 
 func main() {
@@ -57,6 +58,7 @@ func main() {
 
 	// Repositorios
 	accountRepo := sqlite.NewAccountRepository(db)
+	snapshotRepo := sqlite.NewSnapshotRepository(db)
 
 	// Proveedores externos de cotización (RF-10)
 	dolarClient := quotes.NewDolarAPIClient(cfg.DolarAPIBaseURL, cfg.DolarTipo, cfg.DolarCampo, cfg.ExternalAPITimeout)
@@ -66,10 +68,12 @@ func main() {
 	// Usecases (orquestan mapper + repository/proveedores externos)
 	accountUseCase := account.New(accountRepo, account.NewMapper())
 	quoteUseCase := quote.New(quoteProvider)
+	snapshotUseCase := snapshot.New(snapshotRepo, accountRepo, snapshot.NewMapper())
 
 	// Handlers
 	accountHandler := handlers.NewAccountHandler(accountUseCase)
 	quoteHandler := handlers.NewQuoteHandler(quoteUseCase)
+	snapshotHandler := handlers.NewSnapshotHandler(snapshotUseCase)
 
 	router := chi.NewRouter()
 	router.Use(appmiddleware.Recover)
@@ -83,10 +87,11 @@ func main() {
 
 		api.Route("/accounts", accountHandler.Routes)
 		api.Get("/quotes/suggested", quoteHandler.GetSuggested)
+		api.Route("/snapshots", snapshotHandler.Routes)
 
-		// TODO (próxima capa): /snapshots, /income-statements, /reports/*
-		// (Plan Técnico sección 6), siguiendo el mismo patrón
-		// handler -> service -> repository que /accounts.
+		// TODO (próxima capa): /income-statements, /reports/* (Plan Técnico
+		// sección 6), siguiendo el mismo patrón handler -> usecase ->
+		// repository que /accounts y /snapshots.
 	})
 
 	srv := &http.Server{

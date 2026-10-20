@@ -27,7 +27,7 @@ func TestBuildSnapshotDetail_ConvierteAARSYCalculaPorcentajes(t *testing.T) {
 		t.Fatalf("no se esperaba error: %v", err)
 	}
 
-	// Consolidado: 1000 ARS + (10 USD * 1000) = 11000 ARS.
+	// Consolidated: 1000 ARS + (10 USD * 1000) = 11000 ARS.
 	if !detail.ConsolidatedARS.Equal(decimal.NewFromInt(11000)) {
 		t.Fatalf("consolidado ARS inesperado: %s", detail.ConsolidatedARS)
 	}

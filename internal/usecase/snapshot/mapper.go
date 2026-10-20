@@ -8,30 +8,29 @@ import (
 
 //go:generate mockgen -source=mapper.go -destination=mapper_mock_test.go -package=snapshot
 
-// Mapper traduce domain.Snapshot/AccountBalance/ExchangeRate ⇄ los DTO de
-// este paquete. Es una interfaz (y no funciones sueltas) para que UseCase
-// pueda testearse con un mapper falso/mockeado, igual que en
-// internal/usecase/account.
+// Mapper translates domain.Snapshot/AccountBalance/ExchangeRate ⇄ this
+// package's DTOs. It's an interface (not loose functions) so UseCase can
+// be tested with a fake/mocked mapper, same as in internal/usecase/account.
 type Mapper interface {
-	// BalancesByAccount arma el mapa accountID -> saldo original que
-	// consume domain.BuildSnapshotDetail, a partir de lo cargado por el
-	// cliente (RF-05).
+	// BalancesByAccount builds the accountID -> original balance map that
+	// domain.BuildSnapshotDetail consumes, from what the client loaded
+	// (RF-05).
 	BalancesByAccount(in []BalanceInput) map[string]decimal.Decimal
 
-	// ToDomainRates arma las cotizaciones del snapshot (RF-06, RF-11). No
-	// setea ID/SnapshotID/FetchedAt: esos los completa el usecase antes de
-	// persistir.
+	// ToDomainRates builds the snapshot's exchange rates (RF-06, RF-11).
+	// It doesn't set ID/SnapshotID/FetchedAt: the usecase fills those in
+	// before persisting.
 	ToDomainRates(in []RateInput) []domain.ExchangeRate
 
 	ToOutput(detail domain.SnapshotDetail) SnapshotOutput
 	ToSummary(snap domain.Snapshot, consolidatedARS decimal.Decimal) SnapshotSummary
 }
 
-// mapper es la única implementación real de Mapper. No tiene estado ni
-// dependencias, así que un valor cero (mapper{}) alcanza.
+// mapper is Mapper's only real implementation. It has no state or
+// dependencies, so a zero value (mapper{}) is enough.
 type mapper struct{}
 
-// NewMapper construye el mapper real de snapshots.
+// NewMapper builds the real snapshot mapper.
 func NewMapper() Mapper {
 	return mapper{}
 }

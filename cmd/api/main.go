@@ -1,14 +1,14 @@
-// Comando de arranque del servidor HTTP (Plan Técnico sección 9).
-// Cablea configuración, base de datos, repositorios, servicios, handlers y
-// middlewares. Es intencionalmente el único lugar que conoce todas las
-// piezas concretas del sistema.
+// Server startup command (Technical Plan section 9).
+// Wires configuration, database, repositories, services, handlers, and
+// middlewares. It's intentionally the only place that knows about all the
+// concrete pieces of the system.
 //
 //	@title			Financial Tracking App - Backend API
 //	@version		1.0
-//	@description	API backend para seguimiento de finanzas personales (cuentas, snapshots mensuales, cotizaciones).
+//	@description	Backend API for personal finance tracking (accounts, monthly snapshots, exchange rates).
 //
-// Nota: no se declara @BasePath porque /healthz vive fuera de /api/v1; cada
-// @Router de abajo incluye el prefijo completo que corresponde.
+// Note: @BasePath isn't declared because /healthz lives outside /api/v1; each
+// @Router below includes the full prefix it needs.
 package main
 
 import (
@@ -37,15 +37,15 @@ import (
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("cargando configuración: %v", err)
+		log.Fatalf("loading configuration: %v", err)
 	}
 
 	if cfg.DBDriver != "sqlite3" {
-		// El repository pattern (Plan Técnico sección 1) deja el resto del
-		// sistema listo para Postgres/MySQL; sólo falta implementar el
-		// subpaquete correspondiente (internal/repository/postgres, etc.)
-		// y agregar el caso acá.
-		log.Fatalf("DB_DRIVER=%q todavía no tiene implementación (sólo sqlite3 por ahora)", cfg.DBDriver)
+		// The repository pattern (Technical Plan section 1) leaves the rest
+		// of the system ready for Postgres/MySQL; the only thing missing is
+		// implementing the corresponding subpackage
+		// (internal/repository/postgres, etc.) and adding the case here.
+		log.Fatalf("DB_DRIVER=%q is not implemented yet (only sqlite3 for now)", cfg.DBDriver)
 	}
 
 	db, err := sqlite.Open(cfg.DBDSN)
@@ -61,20 +61,20 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	if err := sqlite.Migrate(ctx, db, cfg.MigrationsPath); err != nil {
 		cancel()
-		log.Fatalf("aplicando migraciones: %v", err)
+		log.Fatalf("applying migrations: %v", err)
 	}
 	cancel()
 
-	// Repositorios
+	// Repositories
 	accountRepo := sqlite.NewAccountRepository(db)
 	snapshotRepo := sqlite.NewSnapshotRepository(db)
 
-	// Proveedores externos de cotización (RF-10)
+	// External exchange rate providers (RF-10)
 	dolarClient := quotes.NewDolarAPIClient(cfg.DolarAPIBaseURL, cfg.DolarTipo, cfg.DolarCampo, cfg.ExternalAPITimeout)
 	coinGeckoClient := quotes.NewCoinGeckoClient(cfg.CoinGeckoBaseURL, cfg.ExternalAPITimeout)
 	quoteProvider := quotes.NewCompositeProvider(dolarClient, coinGeckoClient)
 
-	// Usecases (orquestan mapper + repository/proveedores externos)
+	// Usecases (orchestrate mapper + repository/external providers)
 	accountUseCase := account.New(accountRepo, account.NewMapper())
 	quoteUseCase := quote.New(quoteProvider)
 	snapshotUseCase := snapshot.New(snapshotRepo, accountRepo, snapshot.NewMapper())
@@ -99,9 +99,9 @@ func main() {
 		api.Get("/quotes/suggested", quoteHandler.GetSuggested)
 		api.Route("/snapshots", snapshotHandler.Routes)
 
-		// TODO (próxima capa): /income-statements, /reports/* (Plan Técnico
-		// sección 6), siguiendo el mismo patrón handler -> usecase ->
-		// repository que /accounts y /snapshots.
+		// TODO (next layer): /income-statements, /reports/* (Technical Plan
+		// section 6), following the same handler -> usecase -> repository
+		// pattern as /accounts and /snapshots.
 	})
 
 	srv := &http.Server{
@@ -117,7 +117,7 @@ func main() {
 		}
 	}()
 
-	// Apagado ordenado ante SIGINT/SIGTERM.
+	// Graceful shutdown on SIGINT/SIGTERM.
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop

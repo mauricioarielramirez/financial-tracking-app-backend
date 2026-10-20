@@ -13,10 +13,10 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/repository/sqlite"
 )
 
-// newTestSnapshotRepo abre una base SQLite temporal (un archivo por test),
-// le aplica las migraciones reales del proyecto y crea una cuenta de
-// prueba: los saldos requieren una cuenta existente por la FK de
-// account_balances.
+// newTestSnapshotRepo opens a temporary SQLite database (one file per
+// test), applies the project's real migrations to it, and creates a test
+// account: balances require an existing account because of
+// account_balances' FK.
 func newTestSnapshotRepo(t *testing.T) (*sqlite.SnapshotRepository, *domain.Account) {
 	t.Helper()
 
@@ -88,7 +88,7 @@ func TestSnapshotRepository_CreateGetByIDRoundTrip(t *testing.T) {
 	}
 }
 
-// TestSnapshotRepository_ExistsForMonth cubre RF-08.
+// TestSnapshotRepository_ExistsForMonth covers RF-08.
 func TestSnapshotRepository_ExistsForMonth(t *testing.T) {
 	repo, acc := newTestSnapshotRepo(t)
 	ctx := context.Background()
@@ -118,7 +118,7 @@ func TestSnapshotRepository_ExistsForMonth(t *testing.T) {
 	}
 }
 
-// TestSnapshotRepository_UpdateReemplazaSaldosYCotizaciones cubre RF-07.
+// TestSnapshotRepository_UpdateReemplazaSaldosYCotizaciones covers RF-07.
 func TestSnapshotRepository_UpdateReemplazaSaldosYCotizaciones(t *testing.T) {
 	repo, acc := newTestSnapshotRepo(t)
 	ctx := context.Background()
@@ -149,8 +149,8 @@ func TestSnapshotRepository_UpdateReemplazaSaldosYCotizaciones(t *testing.T) {
 	}
 }
 
-// TestSnapshotRepository_DeleteBorraEnCascada cubre el soporte de RF-07/09
-// para corregir cargas: eliminar un snapshot no debe dejar huérfanos en
+// TestSnapshotRepository_DeleteBorraEnCascada covers RF-07/09's support
+// for correcting entries: deleting a snapshot must not leave orphans in
 // account_balances/exchange_rates.
 func TestSnapshotRepository_DeleteBorraEnCascada(t *testing.T) {
 	repo, acc := newTestSnapshotRepo(t)

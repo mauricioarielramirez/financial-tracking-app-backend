@@ -14,10 +14,10 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/repository"
 )
 
-// SnapshotRepository implementa repository.SnapshotRepository sobre SQLite.
-// Snapshot, sus AccountBalance y sus ExchangeRate se escriben siempre juntos
-// dentro de una misma transacción: un snapshot sin desglose completo no
-// tiene sentido de negocio (RF-05, RF-06).
+// SnapshotRepository implements repository.SnapshotRepository over SQLite.
+// A Snapshot, its AccountBalance records, and its ExchangeRate records are
+// always written together within the same transaction: a snapshot without
+// a complete breakdown makes no business sense (RF-05, RF-06).
 type SnapshotRepository struct {
 	db *sql.DB
 }
@@ -46,7 +46,7 @@ func (r *SnapshotRepository) Create(ctx context.Context, snapshot *domain.Snapsh
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck // no-op si ya se hizo Commit
+	defer tx.Rollback() //nolint:errcheck // no-op if Commit already happened
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO snapshots (`+snapshotColumns+`)
@@ -58,7 +58,7 @@ func (r *SnapshotRepository) Create(ctx context.Context, snapshot *domain.Snapsh
 		if isUniqueConstraintErr(err) {
 			return repository.ErrConflict
 		}
-		return fmt.Errorf("insertando snapshot: %w", err)
+		return fmt.Errorf("inserting snapshot: %w", err)
 	}
 
 	if err := insertRates(ctx, tx, snapshot.ID, rates); err != nil {
@@ -78,7 +78,7 @@ func (r *SnapshotRepository) Update(ctx context.Context, snapshot *domain.Snapsh
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck // no-op si ya se hizo Commit
+	defer tx.Rollback() //nolint:errcheck // no-op if Commit already happened
 
 	res, err := tx.ExecContext(ctx, `
 		UPDATE snapshots SET snapshot_date = ?, notes = ?, updated_at = ? WHERE id = ?
@@ -87,17 +87,17 @@ func (r *SnapshotRepository) Update(ctx context.Context, snapshot *domain.Snapsh
 		if isUniqueConstraintErr(err) {
 			return repository.ErrConflict
 		}
-		return fmt.Errorf("actualizando snapshot %s: %w", snapshot.ID, err)
+		return fmt.Errorf("updating snapshot %s: %w", snapshot.ID, err)
 	}
 	if err := checkRowsAffected(res); err != nil {
 		return err
 	}
 
 	if _, err := tx.ExecContext(ctx, `DELETE FROM exchange_rates WHERE snapshot_id = ?`, snapshot.ID); err != nil {
-		return fmt.Errorf("limpiando cotizaciones del snapshot %s: %w", snapshot.ID, err)
+		return fmt.Errorf("clearing exchange rates for snapshot %s: %w", snapshot.ID, err)
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM account_balances WHERE snapshot_id = ?`, snapshot.ID); err != nil {
-		return fmt.Errorf("limpiando saldos del snapshot %s: %w", snapshot.ID, err)
+		return fmt.Errorf("clearing balances for snapshot %s: %w", snapshot.ID, err)
 	}
 
 	if err := insertRates(ctx, tx, snapshot.ID, rates); err != nil {
@@ -110,12 +110,12 @@ func (r *SnapshotRepository) Update(ctx context.Context, snapshot *domain.Snapsh
 	return tx.Commit()
 }
 
-// Delete borra el snapshot; sus account_balances y exchange_rates se van en
-// cascada (ON DELETE CASCADE, ver migración 0001).
+// Delete removes the snapshot; its account_balances and exchange_rates go
+// with it via cascade (ON DELETE CASCADE, see migration 0001).
 func (r *SnapshotRepository) Delete(ctx context.Context, id string) error {
 	res, err := r.db.ExecContext(ctx, `DELETE FROM snapshots WHERE id = ?`, id)
 	if err != nil {
-		return fmt.Errorf("eliminando snapshot %s: %w", id, err)
+		return fmt.Errorf("deleting snapshot %s: %w", id, err)
 	}
 	return checkRowsAffected(res)
 }
@@ -127,14 +127,15 @@ func (r *SnapshotRepository) GetByID(ctx context.Context, id string) (*domain.Sn
 		return nil, repository.ErrNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("buscando snapshot %s: %w", id, err)
+		return nil, fmt.Errorf("fetching snapshot %s: %w", id, err)
 	}
 	return snap, nil
 }
 
-// ExistsForMonth verifica si ya existe un snapshot cuya snapshot_date caiga
-// en el mismo mes que date (RF-08). La comparación es lexicográfica sobre el
-// formato RFC3339Nano en UTC, que preserva el orden cronológico.
+// ExistsForMonth checks whether a snapshot already exists whose
+// snapshot_date falls in the same month as date (RF-08). The comparison is
+// lexicographic over the RFC3339Nano format in UTC, which preserves
+// chronological order.
 func (r *SnapshotRepository) ExistsForMonth(ctx context.Context, date time.Time) (bool, error) {
 	date = date.UTC()
 	monthStart := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, time.UTC)
@@ -148,7 +149,7 @@ func (r *SnapshotRepository) ExistsForMonth(ctx context.Context, date time.Time)
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("verificando snapshot del mes de %s: %w", date.Format("2006-01"), err)
+		return false, fmt.Errorf("checking snapshot for month %s: %w", date.Format("2006-01"), err)
 	}
 	return true, nil
 }
@@ -169,7 +170,7 @@ func (r *SnapshotRepository) List(ctx context.Context, filter repository.Snapsho
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("listando snapshots: %w", err)
+		return nil, fmt.Errorf("listing snapshots: %w", err)
 	}
 	defer rows.Close()
 
@@ -177,7 +178,7 @@ func (r *SnapshotRepository) List(ctx context.Context, filter repository.Snapsho
 	for rows.Next() {
 		snap, err := scanSnapshot(rows)
 		if err != nil {
-			return nil, fmt.Errorf("leyendo snapshot: %w", err)
+			return nil, fmt.Errorf("reading snapshot: %w", err)
 		}
 		snapshots = append(snapshots, *snap)
 	}
@@ -190,7 +191,7 @@ func (r *SnapshotRepository) List(ctx context.Context, filter repository.Snapsho
 func (r *SnapshotRepository) GetBalances(ctx context.Context, snapshotID string) ([]domain.AccountBalance, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+balanceColumns+` FROM account_balances WHERE snapshot_id = ? ORDER BY account_id ASC`, snapshotID)
 	if err != nil {
-		return nil, fmt.Errorf("listando saldos del snapshot %s: %w", snapshotID, err)
+		return nil, fmt.Errorf("listing balances for snapshot %s: %w", snapshotID, err)
 	}
 	defer rows.Close()
 
@@ -198,7 +199,7 @@ func (r *SnapshotRepository) GetBalances(ctx context.Context, snapshotID string)
 	for rows.Next() {
 		b, err := scanBalance(rows)
 		if err != nil {
-			return nil, fmt.Errorf("leyendo saldo: %w", err)
+			return nil, fmt.Errorf("reading balance: %w", err)
 		}
 		balances = append(balances, *b)
 	}
@@ -208,7 +209,7 @@ func (r *SnapshotRepository) GetBalances(ctx context.Context, snapshotID string)
 func (r *SnapshotRepository) GetRates(ctx context.Context, snapshotID string) ([]domain.ExchangeRate, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+rateColumns+` FROM exchange_rates WHERE snapshot_id = ? ORDER BY currency_code ASC`, snapshotID)
 	if err != nil {
-		return nil, fmt.Errorf("listando cotizaciones del snapshot %s: %w", snapshotID, err)
+		return nil, fmt.Errorf("listing exchange rates for snapshot %s: %w", snapshotID, err)
 	}
 	defer rows.Close()
 
@@ -216,16 +217,16 @@ func (r *SnapshotRepository) GetRates(ctx context.Context, snapshotID string) ([
 	for rows.Next() {
 		rt, err := scanRate(rows)
 		if err != nil {
-			return nil, fmt.Errorf("leyendo cotización: %w", err)
+			return nil, fmt.Errorf("reading exchange rate: %w", err)
 		}
 		rates = append(rates, *rt)
 	}
 	return rates, rows.Err()
 }
 
-// BalanceHistory devuelve la serie temporal de saldos de una cuenta entre
-// dos fechas (RF-23), ordenada cronológicamente por la fecha del snapshot al
-// que pertenece cada saldo.
+// BalanceHistory returns an account's balance time series between two
+// dates (RF-23), ordered chronologically by the snapshot date each balance
+// belongs to.
 func (r *SnapshotRepository) BalanceHistory(ctx context.Context, accountID string, from, to time.Time) ([]domain.AccountBalance, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT ab.id, ab.snapshot_id, ab.account_id, ab.balance_original, ab.balance_ars, ab.percentage_of_total
@@ -235,7 +236,7 @@ func (r *SnapshotRepository) BalanceHistory(ctx context.Context, accountID strin
 		ORDER BY s.snapshot_date ASC
 	`, accountID, from.UTC().Format(time.RFC3339Nano), to.UTC().Format(time.RFC3339Nano))
 	if err != nil {
-		return nil, fmt.Errorf("buscando historial de saldos de la cuenta %s: %w", accountID, err)
+		return nil, fmt.Errorf("fetching balance history for account %s: %w", accountID, err)
 	}
 	defer rows.Close()
 
@@ -243,7 +244,7 @@ func (r *SnapshotRepository) BalanceHistory(ctx context.Context, accountID strin
 	for rows.Next() {
 		b, err := scanBalance(rows)
 		if err != nil {
-			return nil, fmt.Errorf("leyendo saldo histórico: %w", err)
+			return nil, fmt.Errorf("reading historical balance: %w", err)
 		}
 		balances = append(balances, *b)
 	}
@@ -266,7 +267,7 @@ func insertRates(ctx context.Context, tx *sql.Tx, snapshotID string, rates []dom
 			rates[i].ID, rates[i].SnapshotID, string(rates[i].CurrencyCode), rates[i].RateToARS.String(),
 			rates[i].Source, rates[i].FetchedAt.Format(time.RFC3339Nano),
 		); err != nil {
-			return fmt.Errorf("insertando cotización %s del snapshot %s: %w", rates[i].CurrencyCode, snapshotID, err)
+			return fmt.Errorf("inserting exchange rate %s for snapshot %s: %w", rates[i].CurrencyCode, snapshotID, err)
 		}
 	}
 	return nil
@@ -285,7 +286,7 @@ func insertBalances(ctx context.Context, tx *sql.Tx, snapshotID string, balances
 			balances[i].ID, balances[i].SnapshotID, balances[i].AccountID,
 			balances[i].BalanceOriginal.String(), balances[i].BalanceARS.String(), balances[i].PercentageOfTotal.String(),
 		); err != nil {
-			return fmt.Errorf("insertando saldo de la cuenta %s en el snapshot %s: %w", balances[i].AccountID, snapshotID, err)
+			return fmt.Errorf("inserting balance for account %s in snapshot %s: %w", balances[i].AccountID, snapshotID, err)
 		}
 	}
 	return nil

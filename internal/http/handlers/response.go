@@ -1,6 +1,6 @@
-// Package handlers contiene los handlers REST por recurso (Plan Técnico
-// sección 9). Traducen HTTP <-> dominio y delegan toda la lógica en
-// internal/service; no acceden a repositorios directamente.
+// Package handlers contains the per-resource REST handlers (Technical Plan
+// section 9). They translate HTTP <-> domain and delegate all logic to
+// internal/service; they never access repositories directly.
 package handlers
 
 import (

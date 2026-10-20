@@ -1,5 +1,5 @@
-// Package middleware agrupa los middlewares HTTP transversales: logging,
-// recuperación de panics y CORS (Plan Técnico sección 9).
+// Package middleware groups the cross-cutting HTTP middlewares: logging,
+// panic recovery, and CORS (Technical Plan section 9).
 package middleware
 
 import (
@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Logging registra método, path, status y duración de cada request.
+// Logging records each request's method, path, status, and duration.
 func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -18,8 +18,8 @@ func Logging(next http.Handler) http.Handler {
 	})
 }
 
-// Recover convierte un panic en un dentro del handler en una respuesta 500,
-// en vez de tumbar el proceso.
+// Recover turns a panic inside the handler into a 500 response, instead of
+// crashing the process.
 func Recover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -33,9 +33,9 @@ func Recover(next http.Handler) http.Handler {
 	})
 }
 
-// CORS habilita acceso desde cualquier origen. Es una app single-user
-// self-hosted (RNF-01): se prioriza simplicidad para poder consumir la API
-// desde un futuro cliente/frontend sin configuración adicional.
+// CORS allows access from any origin. This is a self-hosted, single-user
+// app (RNF-01): simplicity is prioritized so a future client/frontend can
+// consume the API without extra configuration.
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -49,9 +49,9 @@ func CORS(next http.Handler) http.Handler {
 	})
 }
 
-// APIKey exige el header X-API-Key cuando expectedKey no está vacío
-// (RNF-01: autenticación simple opcional al exponer el backend fuera de
-// localhost). Con expectedKey vacío el middleware no hace nada.
+// APIKey requires the X-API-Key header when expectedKey isn't empty
+// (RNF-01: optional simple authentication when exposing the backend outside
+// localhost). With an empty expectedKey, the middleware does nothing.
 func APIKey(expectedKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if expectedKey == "" {

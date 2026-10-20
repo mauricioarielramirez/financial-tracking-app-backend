@@ -10,9 +10,9 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/usecase/snapshot"
 )
 
-// SnapshotHandler expone RF-05 a RF-09 y RF-11 a RF-16 vía HTTP. Sólo
-// traduce HTTP ⇄ DTO del usecase: no conoce domain.Snapshot en ningún
-// momento.
+// SnapshotHandler exposes RF-05 to RF-09 and RF-11 to RF-16 over HTTP. It
+// only translates HTTP ⇄ usecase DTO: it never knows about
+// domain.Snapshot.
 type SnapshotHandler struct {
 	usecase *snapshot.UseCase
 }
@@ -21,8 +21,8 @@ func NewSnapshotHandler(uc *snapshot.UseCase) *SnapshotHandler {
 	return &SnapshotHandler{usecase: uc}
 }
 
-// Routes registra los endpoints de snapshots bajo el router recibido (se
-// monta en /api/v1/snapshots desde cmd/api/main.go).
+// Routes registers the snapshot endpoints under the given router (mounted
+// at /api/v1/snapshots from cmd/api/main.go).
 func (h *SnapshotHandler) Routes(r chi.Router) {
 	r.Post("/", h.Create)
 	r.Post("/import", h.Import)
@@ -32,7 +32,7 @@ func (h *SnapshotHandler) Routes(r chi.Router) {
 	r.Delete("/{id}", h.Delete)
 }
 
-// Create implementa POST /api/v1/snapshots (RF-05, RF-06).
+// Create implements POST /api/v1/snapshots (RF-05, RF-06).
 //
 //	@Summary	Create monthly snapshot
 //	@Tags		snapshots
@@ -58,8 +58,8 @@ func (h *SnapshotHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, out)
 }
 
-// List implementa GET /snapshots con los filtros de RF-25: ?from=, ?to=
-// (fechas en formato RFC3339, p. ej. 2022-01-31T00:00:00Z).
+// List implements GET /snapshots with the RF-25 filters: ?from=, ?to=
+// (dates in RFC3339 format, e.g. 2022-01-31T00:00:00Z).
 //
 //	@Summary	List snapshots
 //	@Tags		snapshots
@@ -97,7 +97,7 @@ func (h *SnapshotHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// Get implementa GET /api/v1/snapshots/{id}.
+// Get implements GET /api/v1/snapshots/{id}.
 //
 //	@Summary	Get snapshot by id
 //	@Tags		snapshots
@@ -116,7 +116,7 @@ func (h *SnapshotHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// Update implementa PUT /api/v1/snapshots/{id} (RF-07): reemplazo completo.
+// Update implements PUT /api/v1/snapshots/{id} (RF-07): a full replace.
 //
 //	@Summary	Replace snapshot (full update)
 //	@Tags		snapshots
@@ -146,7 +146,7 @@ func (h *SnapshotHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// Delete implementa DELETE /api/v1/snapshots/{id}.
+// Delete implements DELETE /api/v1/snapshots/{id}.
 //
 //	@Summary	Delete snapshot
 //	@Tags		snapshots
@@ -163,9 +163,9 @@ func (h *SnapshotHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusNoContent, nil)
 }
 
-// Import implementa POST /snapshots/import (RF-09): carga masiva de los
-// snapshots históricos de 2022. Siempre responde 200 con el detalle
-// por-ítem: un ítem fallido no es un error de la request completa.
+// Import implements POST /snapshots/import (RF-09): bulk import of
+// historical snapshots from 2022. It always responds 200 with the
+// per-item detail: a failed item isn't an error for the whole request.
 //
 //	@Summary	Bulk import historical snapshots
 //	@Tags		snapshots

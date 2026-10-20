@@ -10,9 +10,10 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/repository"
 )
 
-// UseCase orquesta el repository de snapshots y el de cuentas: necesita
-// saber qué cuentas están activas (y su moneda/clasificación invertido) para
-// poder aplicar domain.BuildSnapshotDetail (RF-05 a RF-09, RF-13 a RF-16).
+// UseCase orchestrates the snapshot repository and the account one: it
+// needs to know which accounts are active (and their currency/invested
+// classification) to be able to apply domain.BuildSnapshotDetail (RF-05 to
+// RF-09, RF-13 to RF-16).
 type UseCase struct {
 	repo        repository.SnapshotRepository
 	accountRepo repository.AccountRepository
@@ -23,8 +24,9 @@ func New(repo repository.SnapshotRepository, accountRepo repository.AccountRepos
 	return &UseCase{repo: repo, accountRepo: accountRepo, mapper: mapper}
 }
 
-// Create arma y persiste un snapshot mensual (RF-05, RF-06) verificando
-// primero que no exista ya uno para el mismo mes, salvo Force (RF-08).
+// Create builds and persists a monthly snapshot (RF-05, RF-06), first
+// checking that one doesn't already exist for the same month, unless
+// Force is set (RF-08).
 func (uc *UseCase) Create(ctx context.Context, in CreateSnapshotInput) (SnapshotOutput, error) {
 	if !in.Force {
 		exists, err := uc.repo.ExistsForMonth(ctx, in.SnapshotDate)
@@ -53,9 +55,9 @@ func (uc *UseCase) Create(ctx context.Context, in CreateSnapshotInput) (Snapshot
 	return uc.mapper.ToOutput(detail), nil
 }
 
-// Update reemplaza fecha, notas, saldos y cotizaciones de un snapshot ya
-// cargado (RF-07), reaplicando la misma validación de duplicado por mes
-// cuando la fecha cambia de mes (RF-08).
+// Update replaces an already-loaded snapshot's date, notes, balances, and
+// exchange rates (RF-07), reapplying the same per-month duplicate
+// validation when the date moves to a different month (RF-08).
 func (uc *UseCase) Update(ctx context.Context, id string, in UpdateSnapshotInput) (SnapshotOutput, error) {
 	existing, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
@@ -91,15 +93,15 @@ func (uc *UseCase) Update(ctx context.Context, id string, in UpdateSnapshotInput
 	return uc.mapper.ToOutput(detail), nil
 }
 
-// Delete elimina un snapshot y su desglose asociado (cascada a cargo del
-// repository).
+// Delete removes a snapshot and its associated breakdown (cascade handled
+// by the repository).
 func (uc *UseCase) Delete(ctx context.Context, id string) error {
 	return uc.repo.Delete(ctx, id)
 }
 
-// GetByID arma el detalle completo de un snapshot ya persistido (RF-21,
-// RF-22), reconstruyendo los totales a partir de lo guardado (nunca
-// recalcula BalanceARS con cotizaciones actuales: RNF-02).
+// GetByID builds the full detail of an already-persisted snapshot (RF-21,
+// RF-22), reconstructing the totals from what was saved (it never
+// recalculates BalanceARS with current exchange rates: RNF-02).
 func (uc *UseCase) GetByID(ctx context.Context, id string) (SnapshotOutput, error) {
 	snap, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
@@ -114,9 +116,9 @@ func (uc *UseCase) GetByID(ctx context.Context, id string) (SnapshotOutput, erro
 		return SnapshotOutput{}, err
 	}
 
-	// Se listan todas las cuentas (activas e inactivas) porque una cuenta
-	// desactivada después de este snapshot debe seguir clasificándose en su
-	// desglose histórico (RF-04, RF-16).
+	// Every account is listed (active and inactive) because an account
+	// deactivated after this snapshot must still be classified in its
+	// historical breakdown (RF-04, RF-16).
 	accounts, err := uc.accountRepo.List(ctx, repository.AccountFilter{})
 	if err != nil {
 		return SnapshotOutput{}, err
@@ -140,8 +142,8 @@ func (uc *UseCase) GetByID(ctx context.Context, id string) (SnapshotOutput, erro
 	return uc.mapper.ToOutput(detail), nil
 }
 
-// List devuelve el listado resumido de snapshots filtrado por rango de
-// fechas (RF-25), con la posición consolidada de cada uno (RF-22).
+// List returns the summarized snapshot listing filtered by date range
+// (RF-25), with each one's consolidated position (RF-22).
 func (uc *UseCase) List(ctx context.Context, filter ListFilter) ([]SnapshotSummary, error) {
 	snaps, err := uc.repo.List(ctx, repository.SnapshotFilter{From: filter.From, To: filter.To})
 	if err != nil {
@@ -163,12 +165,12 @@ func (uc *UseCase) List(ctx context.Context, filter ListFilter) ([]SnapshotSumma
 	return out, nil
 }
 
-// Import carga en forma masiva los snapshots históricos de 2022 (RF-09). Cada
-// item se procesa de forma independiente: un error en uno no aborta el
-// resto, y a diferencia de Create/Update no exige cubrir "todas las cuentas
-// activas actuales" (la cartera de cuentas puede haber cambiado desde
-// entonces) ni valida duplicado por mes (una importación reconstruye una
-// serie histórica completa).
+// Import bulk-loads the historical snapshots from 2022 (RF-09). Each item
+// is processed independently: an error in one doesn't abort the rest, and
+// unlike Create/Update it doesn't require covering "all currently active
+// accounts" (the account portfolio may have changed since then) nor does
+// it validate per-month duplicates (an import reconstructs a complete
+// historical series).
 func (uc *UseCase) Import(ctx context.Context, in ImportInput) ImportOutput {
 	results := make([]ImportItemResult, len(in.Items))
 
@@ -203,9 +205,9 @@ func (uc *UseCase) Import(ctx context.Context, in ImportInput) ImportOutput {
 	return ImportOutput{Results: results}
 }
 
-// accountsReferencedBy resuelve, por ID, las cuentas usadas por un ítem de
-// importación (a diferencia de Create/Update, no exige que sean las cuentas
-// activas actuales).
+// accountsReferencedBy resolves, by ID, the accounts used by an import
+// item (unlike Create/Update, it doesn't require them to be the currently
+// active accounts).
 func (uc *UseCase) accountsReferencedBy(ctx context.Context, balances []BalanceInput) ([]domain.Account, error) {
 	accounts := make([]domain.Account, 0, len(balances))
 	for _, b := range balances {
@@ -218,9 +220,9 @@ func (uc *UseCase) accountsReferencedBy(ctx context.Context, balances []BalanceI
 	return accounts, nil
 }
 
-// buildDetail arma el domain.Snapshot y su SnapshotDetail a partir de un
-// input común a Create/Update/Import. isImport controla la fuente por
-// defecto de las cotizaciones sin Source explícito (RF-06, RF-09).
+// buildDetail builds the domain.Snapshot and its SnapshotDetail from an
+// input shared by Create/Update/Import. isImport controls the default
+// source for exchange rates without an explicit Source (RF-06, RF-09).
 func (uc *UseCase) buildDetail(snapshotDate time.Time, notes *string, accounts []domain.Account, balances []BalanceInput, rateInputs []RateInput, isImport bool) (domain.SnapshotDetail, error) {
 	balancesMap := uc.mapper.BalancesByAccount(balances)
 	rates := uc.mapper.ToDomainRates(rateInputs)

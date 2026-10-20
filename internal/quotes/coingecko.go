@@ -12,8 +12,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// cryptoIDs mapea nuestros símbolos soportados al id que espera la API de
-// CoinGecko (RF-10, Requerimientos Funcionales sección 4).
+// cryptoIDs maps our supported symbols to the id expected by the CoinGecko
+// API (RF-10, Functional Requirements section 4).
 var cryptoIDs = map[string]string{
 	"BTC":  "bitcoin",
 	"ETH":  "ethereum",
@@ -21,10 +21,10 @@ var cryptoIDs = map[string]string{
 	"USDT": "tether",
 }
 
-// CoinGeckoClient consulta la API pública (nivel gratuito, sin key) de
-// CoinGecko para cotizaciones cripto en ARS.
+// CoinGeckoClient queries CoinGecko's public API (free tier, no key) for
+// crypto exchange rates in ARS.
 type CoinGeckoClient struct {
-	BaseURL string // p. ej. "https://api.coingecko.com/api/v3"
+	BaseURL string // e.g. "https://api.coingecko.com/api/v3"
 	Client  *http.Client
 }
 
@@ -35,16 +35,16 @@ func NewCoinGeckoClient(baseURL string, timeout time.Duration) *CoinGeckoClient 
 	}
 }
 
-// GetUSDRate: CoinGeckoClient sólo resuelve cripto; ver CompositeProvider.
+// GetUSDRate: CoinGeckoClient only resolves crypto; see CompositeProvider.
 func (c *CoinGeckoClient) GetUSDRate(ctx context.Context) (decimal.Decimal, error) {
-	return decimal.Zero, fmt.Errorf("CoinGeckoClient no provee cotización de USD/ARS; usar DolarAPIClient")
+	return decimal.Zero, fmt.Errorf("CoinGeckoClient does not provide a USD/ARS exchange rate; use DolarAPIClient")
 }
 
-// GetCryptoRate implementa quotes.QuoteProvider para símbolos cripto.
+// GetCryptoRate implements quotes.QuoteProvider for crypto symbols.
 func (c *CoinGeckoClient) GetCryptoRate(ctx context.Context, symbol string) (decimal.Decimal, error) {
 	id, ok := cryptoIDs[strings.ToUpper(symbol)]
 	if !ok {
-		return decimal.Zero, fmt.Errorf("símbolo cripto no soportado: %q", symbol)
+		return decimal.Zero, fmt.Errorf("unsupported crypto symbol: %q", symbol)
 	}
 
 	endpoint := fmt.Sprintf("%s/simple/price?ids=%s&vs_currencies=ars",
@@ -56,27 +56,27 @@ func (c *CoinGeckoClient) GetCryptoRate(ctx context.Context, symbol string) (dec
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("consultando CoinGecko: %w", err)
+		return decimal.Zero, fmt.Errorf("querying CoinGecko: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return decimal.Zero, fmt.Errorf("CoinGecko devolvió status %d", resp.StatusCode)
+		return decimal.Zero, fmt.Errorf("CoinGecko returned status %d", resp.StatusCode)
 	}
 
-	// Respuesta con forma: {"bitcoin": {"ars": 123456.0}}
+	// Response shaped like: {"bitcoin": {"ars": 123456.0}}
 	var body map[string]map[string]float64
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return decimal.Zero, fmt.Errorf("decodificando respuesta de CoinGecko: %w", err)
+		return decimal.Zero, fmt.Errorf("decoding CoinGecko response: %w", err)
 	}
 
 	coin, ok := body[id]
 	if !ok {
-		return decimal.Zero, fmt.Errorf("CoinGecko no devolvió datos para %q", id)
+		return decimal.Zero, fmt.Errorf("CoinGecko returned no data for %q", id)
 	}
 	rate, ok := coin["ars"]
 	if !ok {
-		return decimal.Zero, fmt.Errorf("CoinGecko no devolvió cotización en ARS para %q", id)
+		return decimal.Zero, fmt.Errorf("CoinGecko returned no ARS rate for %q", id)
 	}
 
 	return decimal.NewFromFloat(rate), nil

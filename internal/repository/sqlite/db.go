@@ -1,18 +1,18 @@
-// Package sqlite contiene la implementación concreta de las interfaces de
-// internal/repository sobre SQLite (Plan Técnico sección 1: el repository
-// pattern es lo que permite migrar a Postgres/MySQL sin tocar el resto del
-// sistema).
+// Package sqlite contains the concrete implementation of the
+// internal/repository interfaces over SQLite (Technical Plan section 1:
+// the repository pattern is what allows migrating to Postgres/MySQL
+// without touching the rest of the system).
 //
-// Nota sobre el driver: se usa github.com/mattn/go-sqlite3 (basado en CGO)
-// en lugar de una alternativa pura-Go, porque en el entorno donde se generó
-// este primer artefacto no había acceso de red a los módulos pure-Go
-// habituales (modernc.org/sqlite vía gitlab.com, o cualquier paquete que
-// dependa de golang.org/x/sys). Para compilar el proyecto hace falta un
-// compilador de C disponible (en Windows: MSYS2/mingw-w64 o TDM-GCC) y
-// `CGO_ENABLED=1` (que es el default de Go si detecta un compilador). Si
-// más adelante se prefiere evitar CGO, alcanza con reemplazar este paquete
-// por una implementación equivalente sobre un driver pure-Go: las
-// interfaces de internal/repository no cambian.
+// Note on the driver: github.com/mattn/go-sqlite3 (CGO-based) is used
+// instead of a pure-Go alternative, because the environment where this
+// first artifact was generated had no network access to the usual pure-Go
+// modules (modernc.org/sqlite via gitlab.com, or any package depending on
+// golang.org/x/sys). Building the project requires an available C
+// compiler (on Windows: MSYS2/mingw-w64 or TDM-GCC) and `CGO_ENABLED=1`
+// (which is Go's default if it detects a compiler). If avoiding CGO is
+// preferred later on, it's enough to replace this package with an
+// equivalent implementation over a pure-Go driver: the
+// internal/repository interfaces don't change.
 package sqlite
 
 import (
@@ -25,11 +25,12 @@ import (
 
 	"database/sql"
 
-	_ "github.com/mattn/go-sqlite3" // registra el driver "sqlite3" en database/sql
+	_ "github.com/mattn/go-sqlite3" // registers the "sqlite3" driver in database/sql
 )
 
-// Open abre la conexión a la base SQLite en dsn (p. ej. "./finance.db") y
-// habilita foreign keys, que SQLite trae deshabilitadas por defecto.
+// Open opens the connection to the SQLite database at dsn (e.g.
+// "./finance.db") and enables foreign keys, which SQLite ships disabled by
+// default.
 func Open(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dsn+"?_foreign_keys=on")
 	if err != nil {
@@ -38,20 +39,20 @@ func Open(dsn string) (*sql.DB, error) {
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("conectando a sqlite (%s): %w", dsn, err)
 	}
-	// SQLite no soporta bien la escritura concurrente desde múltiples
-	// conexiones; para una app single-user (RNF-01) alcanza con serializar.
+	// SQLite doesn't handle concurrent writes from multiple connections
+	// well; for a single-user app (RNF-01) serializing is enough.
 	db.SetMaxOpenConns(1)
 	return db, nil
 }
 
-// Migrate aplica, en orden, los archivos *.up.sql de migrationsPath que
-// todavía no figuren en la tabla schema_migrations.
+// Migrate applies, in order, the *.up.sql files in migrationsPath that
+// aren't already listed in the schema_migrations table.
 //
-// Es un runner deliberadamente simple (no golang-migrate) para no sumar una
-// dependencia más mientras el acceso a proxy.golang.org esté bloqueado;
-// sigue la misma convención de nombres (NNNN_descripcion.up.sql / .down.sql)
-// por lo que adoptar golang-migrate más adelante no requiere reescribir los
-// archivos de migración, sólo el runner.
+// It's a deliberately simple runner (not golang-migrate) so as not to add
+// another dependency while access to proxy.golang.org is blocked; it
+// follows the same naming convention (NNNN_description.up.sql / .down.sql)
+// so adopting golang-migrate later doesn't require rewriting the
+// migration files, just the runner.
 func Migrate(ctx context.Context, db *sql.DB, migrationsPath string) error {
 	if _, err := db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -59,13 +60,13 @@ func Migrate(ctx context.Context, db *sql.DB, migrationsPath string) error {
 			applied_at TEXT NOT NULL DEFAULT (datetime('now'))
 		)
 	`); err != nil {
-		return fmt.Errorf("creando schema_migrations: %w", err)
+		return fmt.Errorf("creating schema_migrations: %w", err)
 	}
 
 	applied := map[string]bool{}
 	rows, err := db.QueryContext(ctx, "SELECT version FROM schema_migrations")
 	if err != nil {
-		return fmt.Errorf("leyendo schema_migrations: %w", err)
+		return fmt.Errorf("reading schema_migrations: %w", err)
 	}
 	for rows.Next() {
 		var v string
@@ -79,7 +80,7 @@ func Migrate(ctx context.Context, db *sql.DB, migrationsPath string) error {
 
 	entries, err := os.ReadDir(migrationsPath)
 	if err != nil {
-		return fmt.Errorf("leyendo directorio de migraciones (%s): %w", migrationsPath, err)
+		return fmt.Errorf("reading migrations directory (%s): %w", migrationsPath, err)
 	}
 
 	var upFiles []string
@@ -99,7 +100,7 @@ func Migrate(ctx context.Context, db *sql.DB, migrationsPath string) error {
 
 		content, err := os.ReadFile(filepath.Join(migrationsPath, fileName))
 		if err != nil {
-			return fmt.Errorf("leyendo migración %s: %w", fileName, err)
+			return fmt.Errorf("reading migration %s: %w", fileName, err)
 		}
 
 		tx, err := db.BeginTx(ctx, nil)
@@ -108,11 +109,11 @@ func Migrate(ctx context.Context, db *sql.DB, migrationsPath string) error {
 		}
 		if _, err := tx.ExecContext(ctx, string(content)); err != nil {
 			tx.Rollback()
-			return fmt.Errorf("aplicando migración %s: %w", fileName, err)
+			return fmt.Errorf("applying migration %s: %w", fileName, err)
 		}
 		if _, err := tx.ExecContext(ctx, "INSERT INTO schema_migrations (version) VALUES (?)", version); err != nil {
 			tx.Rollback()
-			return fmt.Errorf("registrando migración %s: %w", fileName, err)
+			return fmt.Errorf("recording migration %s: %w", fileName, err)
 		}
 		if err := tx.Commit(); err != nil {
 			return err

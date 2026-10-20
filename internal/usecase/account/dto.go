@@ -1,15 +1,15 @@
-// Package account contiene el usecase de cuentas/activos (RF-01 a RF-04):
-// el orquestador entre el handler HTTP y el repository. Todo lo que entra o
-// sale de este paquete lo hace en forma de DTO (Input/Output definidos acá
-// mismo, a la misma altura que el usecase); domain.Account nunca cruza su
-// frontera hacia afuera.
+// Package account contains the accounts/assets usecase (RF-01 to RF-04):
+// the orchestrator between the HTTP handler and the repository. Everything
+// that enters or leaves this package does so as a DTO (Input/Output
+// defined right here, alongside the usecase); domain.Account never
+// crosses its boundary.
 package account
 
 import "time"
 
-// CreateAccountInput es el contrato de entrada de POST /accounts.
-// Lleva tags json porque ES el contrato de la API: el handler decodifica
-// el body directamente sobre esta struct.
+// CreateAccountInput is the input contract for POST /accounts.
+// It carries json tags because it IS the API contract: the handler decodes
+// the body directly onto this struct.
 type CreateAccountInput struct {
 	Name          string  `json:"name"`
 	Type          string  `json:"type"`
@@ -18,7 +18,7 @@ type CreateAccountInput struct {
 	IsInvested    bool    `json:"is_invested"`
 }
 
-// UpdateAccountInput es el contrato de entrada de PUT /accounts/{id}.
+// UpdateAccountInput is the input contract for PUT /accounts/{id}.
 type UpdateAccountInput struct {
 	Name          string  `json:"name"`
 	Type          string  `json:"type"`
@@ -27,10 +27,10 @@ type UpdateAccountInput struct {
 	IsInvested    bool    `json:"is_invested"`
 }
 
-// PatchAccountInput es el contrato de entrada de PATCH /accounts/{id}:
-// a diferencia de UpdateAccountInput (reemplazo completo, PUT), cada campo
-// es un puntero para distinguir "no vino en el JSON" (nil, se deja el valor
-// actual) de "vino con un valor" (se pisa ese campo puntual).
+// PatchAccountInput is the input contract for PATCH /accounts/{id}: unlike
+// UpdateAccountInput (a full PUT replace), every field is a pointer to
+// distinguish "wasn't in the JSON" (nil, the current value is kept) from
+// "came with a value" (that specific field is overwritten).
 type PatchAccountInput struct {
 	Name          *string `json:"name,omitempty"`
 	Type          *string `json:"type,omitempty"`
@@ -39,18 +39,18 @@ type PatchAccountInput struct {
 	IsInvested    *bool   `json:"is_invested,omitempty"`
 }
 
-// ListFilter es el contrato de entrada de GET /accounts (RF-25). Se resuelve
-// acá (no en el handler ni en el repository) para no filtrar detalles del
-// query string hacia el repository ni detalles de repository.AccountFilter
-// hacia el handler.
+// ListFilter is the input contract for GET /accounts (RF-25). It's
+// resolved here (not in the handler or the repository) so query string
+// details don't leak into the repository, nor repository.AccountFilter
+// details into the handler.
 type ListFilter struct {
 	ActiveOnly *bool
 	Type       *string
 	Group      *string
 }
 
-// AccountOutput es el contrato de salida para cualquier operación que
-// devuelva una cuenta (Create, Update, Get, y cada elemento de List).
+// AccountOutput is the output contract for any operation that returns an
+// account (Create, Update, Get, and each element of List).
 type AccountOutput struct {
 	ID            string    `json:"id"`
 	Name          string    `json:"name"`

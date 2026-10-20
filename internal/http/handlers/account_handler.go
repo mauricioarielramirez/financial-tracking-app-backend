@@ -9,9 +9,9 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/usecase/account"
 )
 
-// AccountHandler expone RF-01 a RF-04 vía HTTP. Sólo traduce HTTP ⇄ DTO del
-// usecase (account.CreateAccountInput, account.AccountOutput, etc.): no
-// conoce domain.Account en ningún momento.
+// AccountHandler exposes RF-01 to RF-04 over HTTP. It only translates
+// HTTP ⇄ usecase DTO (account.CreateAccountInput, account.AccountOutput,
+// etc.): it never knows about domain.Account.
 type AccountHandler struct {
 	usecase *account.UseCase
 }
@@ -20,8 +20,8 @@ func NewAccountHandler(uc *account.UseCase) *AccountHandler {
 	return &AccountHandler{usecase: uc}
 }
 
-// Routes registra los endpoints de cuentas bajo el router recibido
-// (se monta en /api/v1/accounts desde cmd/api/main.go).
+// Routes registers the account endpoints under the given router
+// (mounted at /api/v1/accounts from cmd/api/main.go).
 func (h *AccountHandler) Routes(r chi.Router) {
 	r.Post("/", h.Create)
 	r.Get("/", h.List)
@@ -31,7 +31,7 @@ func (h *AccountHandler) Routes(r chi.Router) {
 	r.Delete("/{id}", h.Deactivate)
 }
 
-// Create implementa POST /api/v1/accounts (RF-01).
+// Create implements POST /api/v1/accounts (RF-01).
 //
 //	@Summary	Create account
 //	@Tags		accounts
@@ -57,7 +57,7 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, out)
 }
 
-// List implementa GET /accounts con los filtros de RF-25:
+// List implements GET /accounts with the RF-25 filters:
 // ?active=true, ?type=, ?group=
 //
 //	@Summary	List accounts
@@ -90,7 +90,7 @@ func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// Get implementa GET /api/v1/accounts/{id}.
+// Get implements GET /api/v1/accounts/{id}.
 //
 //	@Summary	Get account by id
 //	@Tags		accounts
@@ -109,8 +109,8 @@ func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// Update implementa PUT /api/v1/accounts/{id}: reemplazo completo, hay que
-// mandar todos los campos editables (no es un merge parcial, ver Patch).
+// Update implements PUT /api/v1/accounts/{id}: a full replace, you need to
+// send every editable field (it's not a partial merge, see Patch).
 //
 //	@Summary	Replace account (full update)
 //	@Tags		accounts
@@ -140,8 +140,8 @@ func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// Patch implementa PATCH /accounts/{id}: edición parcial, sólo se pisan los
-// campos presentes en el JSON (ver account.PatchAccountInput).
+// Patch implements PATCH /accounts/{id}: a partial edit, only the fields
+// present in the JSON are overwritten (see account.PatchAccountInput).
 //
 //	@Summary	Partially update account
 //	@Tags		accounts
@@ -171,8 +171,8 @@ func (h *AccountHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// Deactivate implementa el DELETE de RF-01: soft delete, nunca borra el
-// historial (RF-04).
+// Deactivate implements RF-01's DELETE: a soft delete, it never erases the
+// history (RF-04).
 //
 //	@Summary	Deactivate account (soft delete)
 //	@Tags		accounts

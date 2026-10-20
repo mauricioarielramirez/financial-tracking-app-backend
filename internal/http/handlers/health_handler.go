@@ -2,9 +2,9 @@ package handlers
 
 import "net/http"
 
-// Health es un endpoint mínimo de diagnóstico (GET /healthz), útil para
-// verificar que el proceso y la conexión a la base están arriba, y como
-// primer artefacto para probar el server manualmente.
+// Health is a minimal diagnostic endpoint (GET /healthz), useful to check
+// that the process and the database connection are up, and as the first
+// artifact to test the server by hand.
 //
 //	@Summary	Health check
 //	@Tags		health

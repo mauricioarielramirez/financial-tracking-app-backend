@@ -6,7 +6,7 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/usecase/quote"
 )
 
-// QuoteHandler expone GET /quotes/suggested (RF-10).
+// QuoteHandler exposes GET /quotes/suggested (RF-10).
 type QuoteHandler struct {
 	usecase *quote.UseCase
 }
@@ -15,7 +15,7 @@ func NewQuoteHandler(uc *quote.UseCase) *QuoteHandler {
 	return &QuoteHandler{usecase: uc}
 }
 
-// GetSuggested implementa GET /api/v1/quotes/suggested (RF-10, RF-11).
+// GetSuggested implements GET /api/v1/quotes/suggested (RF-10, RF-11).
 //
 //	@Summary	Suggested exchange rates
 //	@Tags		quotes

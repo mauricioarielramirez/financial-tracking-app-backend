@@ -12,10 +12,10 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/usecase/snapshot"
 )
 
-// TestCreate_RechazaDuplicadoDeMesSinForce cubre RF-08: si ya existe un
-// snapshot en el mismo mes y no se pide Force, el usecase debe devolver el
-// conflicto sin tocar el repositorio de cuentas ni el de snapshots más allá
-// de la verificación.
+// TestCreate_RechazaDuplicadoDeMesSinForce covers RF-08: if a snapshot
+// already exists for the same month and Force isn't requested, the
+// usecase must return the conflict without touching the account
+// repository or the snapshot one beyond the check.
 func TestCreate_RechazaDuplicadoDeMesSinForce(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	snapRepo := mocks.NewMockSnapshotRepository(ctrl)
@@ -34,9 +34,9 @@ func TestCreate_RechazaDuplicadoDeMesSinForce(t *testing.T) {
 	}
 }
 
-// TestCreate_PersisteYDevuelveElOutputDelMapper cubre el camino feliz de
-// RF-05/RF-06: sin duplicado de mes, arma el detalle a partir de las cuentas
-// activas y persiste.
+// TestCreate_PersisteYDevuelveElOutputDelMapper covers the happy path of
+// RF-05/RF-06: with no month duplicate, it builds the detail from the
+// active accounts and persists it.
 func TestCreate_PersisteYDevuelveElOutputDelMapper(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	snapRepo := mocks.NewMockSnapshotRepository(ctrl)
@@ -52,9 +52,9 @@ func TestCreate_PersisteYDevuelveElOutputDelMapper(t *testing.T) {
 
 	snapRepo.EXPECT().ExistsForMonth(gomock.Any(), in.SnapshotDate).Return(false, nil)
 	accountRepo.EXPECT().List(gomock.Any(), gomock.Any()).Return(accounts, nil)
-	// BalancesByAccount y ToDomainRates se llaman con las entradas vacías;
-	// devolvemos también vacío para que domain.BuildSnapshotDetail no
-	// encuentre ninguna cuenta que validar.
+	// BalancesByAccount and ToDomainRates are called with the empty
+	// inputs; we also return empty so domain.BuildSnapshotDetail doesn't
+	// find any account to validate.
 	mapper.EXPECT().BalancesByAccount(in.Balances).Return(nil)
 	mapper.EXPECT().ToDomainRates(in.Rates).Return(nil)
 	snapRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
@@ -75,8 +75,9 @@ func TestCreate_PersisteYDevuelveElOutputDelMapper(t *testing.T) {
 	}
 }
 
-// TestCreate_ForcePermiteOmitirLaVerificacionDeMes cubre el override de
-// RF-08: con Force en true, el usecase no debe consultar ExistsForMonth.
+// TestCreate_ForcePermiteOmitirLaVerificacionDeMes covers RF-08's
+// override: with Force set to true, the usecase must not query
+// ExistsForMonth.
 func TestCreate_ForcePermiteOmitirLaVerificacionDeMes(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	snapRepo := mocks.NewMockSnapshotRepository(ctrl)

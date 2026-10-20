@@ -27,6 +27,18 @@ type UpdateAccountInput struct {
 	IsInvested    bool    `json:"is_invested"`
 }
 
+// PatchAccountInput es el contrato de entrada de PATCH /accounts/{id}:
+// a diferencia de UpdateAccountInput (reemplazo completo, PUT), cada campo
+// es un puntero para distinguir "no vino en el JSON" (nil, se deja el valor
+// actual) de "vino con un valor" (se pisa ese campo puntual).
+type PatchAccountInput struct {
+	Name          *string `json:"name,omitempty"`
+	Type          *string `json:"type,omitempty"`
+	Currency      *string `json:"currency,omitempty"`
+	ProviderGroup *string `json:"provider_group,omitempty"`
+	IsInvested    *bool   `json:"is_invested,omitempty"`
+}
+
 // ListFilter es el contrato de entrada de GET /accounts (RF-25). Se resuelve
 // acá (no en el handler ni en el repository) para no filtrar detalles del
 // query string hacia el repository ni detalles de repository.AccountFilter

@@ -18,6 +18,11 @@ type Mapper interface {
 	// una cuenta ya existente, sin tocar ID, IsActive ni los timestamps.
 	ApplyUpdate(in UpdateAccountInput, acc *domain.Account)
 
+	// ApplyPatch aplica sólo los campos presentes (no nil) de
+	// PatchAccountInput sobre una cuenta ya existente; los campos ausentes
+	// conservan su valor actual.
+	ApplyPatch(in PatchAccountInput, acc *domain.Account)
+
 	ToOutput(a domain.Account) AccountOutput
 	ToOutputList(accounts []domain.Account) []AccountOutput
 }
@@ -47,6 +52,24 @@ func (mapper) ApplyUpdate(in UpdateAccountInput, acc *domain.Account) {
 	acc.Currency = domain.Currency(in.Currency)
 	acc.ProviderGroup = in.ProviderGroup
 	acc.IsInvested = in.IsInvested
+}
+
+func (mapper) ApplyPatch(in PatchAccountInput, acc *domain.Account) {
+	if in.Name != nil {
+		acc.Name = *in.Name
+	}
+	if in.Type != nil {
+		acc.Type = domain.AccountType(*in.Type)
+	}
+	if in.Currency != nil {
+		acc.Currency = domain.Currency(*in.Currency)
+	}
+	if in.ProviderGroup != nil {
+		acc.ProviderGroup = in.ProviderGroup
+	}
+	if in.IsInvested != nil {
+		acc.IsInvested = *in.IsInvested
+	}
 }
 
 func (mapper) ToOutput(a domain.Account) AccountOutput {

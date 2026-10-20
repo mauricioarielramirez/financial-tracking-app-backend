@@ -134,6 +134,28 @@ func (r *AccountRepository) List(ctx context.Context, filter repository.AccountF
 	return accounts, nil
 }
 
+// ExistsByName verifica si ya existe una cuenta con ese nombre (RF-01/RF-02).
+// excludeID se usa en la edición para no comparar la cuenta contra sí misma.
+func (r *AccountRepository) ExistsByName(ctx context.Context, name string, excludeID *string) (bool, error) {
+	query := "SELECT 1 FROM accounts WHERE name = ?"
+	args := []interface{}{name}
+	if excludeID != nil {
+		query += " AND id != ?"
+		args = append(args, *excludeID)
+	}
+	query += " LIMIT 1"
+
+	var exists int
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("verificando nombre de cuenta %q: %w", name, err)
+	}
+	return true, nil
+}
+
 // rowScanner abstrae *sql.Row y *sql.Rows, que comparten el método Scan
 // pero no una interfaz común en la stdlib.
 type rowScanner interface {

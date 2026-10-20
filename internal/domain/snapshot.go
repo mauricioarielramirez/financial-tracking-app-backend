@@ -67,11 +67,11 @@ var (
 	// ErrSnapshotMissingBalance se devuelve cuando falta el saldo de alguna
 	// cuenta activa al armar un snapshot (RF-05: "saldo de cada cuenta
 	// activa a esa fecha").
-	ErrSnapshotMissingBalance = errors.New("falta el saldo de una o más cuentas activas")
+	ErrSnapshotMissingBalance = errors.New("missing balance for one or more active accounts")
 	// ErrSnapshotMissingRate se devuelve cuando una cuenta está en una
 	// moneda distinta de ARS y no hay cotización provista para convertirla
 	// (RF-06, RF-13).
-	ErrSnapshotMissingRate = errors.New("falta la cotización de una o más monedas usadas por las cuentas activas")
+	ErrSnapshotMissingRate = errors.New("missing exchange rate for one or more currencies used by active accounts")
 )
 
 // BuildSnapshotDetail calcula, a partir de las cuentas activas, sus saldos
@@ -94,14 +94,14 @@ func BuildSnapshotDetail(snap Snapshot, accounts []Account, balancesByAccount ma
 	for _, acc := range accounts {
 		original, ok := balancesByAccount[acc.ID]
 		if !ok {
-			return SnapshotDetail{}, fmt.Errorf("%w: cuenta %s", ErrSnapshotMissingBalance, acc.Name)
+			return SnapshotDetail{}, fmt.Errorf("%w: account %s", ErrSnapshotMissingBalance, acc.Name)
 		}
 
 		balanceARS := original
 		if acc.Currency != CurrencyARS {
 			rate, ok := rateByCurrency[acc.Currency]
 			if !ok {
-				return SnapshotDetail{}, fmt.Errorf("%w: moneda %s (cuenta %s)", ErrSnapshotMissingRate, acc.Currency, acc.Name)
+				return SnapshotDetail{}, fmt.Errorf("%w: currency %s (account %s)", ErrSnapshotMissingRate, acc.Currency, acc.Name)
 			}
 			balanceARS = original.Mul(rate)
 		}

@@ -27,11 +27,11 @@ import (
 // Las implementaciones concretas deben mapear su error específico
 // (p. ej. sql.ErrNoRows) a este sentinel para que la capa de servicio no
 // dependa del motor de base de datos.
-var ErrNotFound = errors.New("recurso no encontrado")
+var ErrNotFound = errors.New("resource not found")
 
 // ErrConflict se devuelve ante violaciones de restricciones únicas
 // (p. ej. dos snapshots para el mismo mes sin override, RF-08).
-var ErrConflict = errors.New("conflicto: el recurso ya existe")
+var ErrConflict = errors.New("conflict: resource already exists")
 
 // AccountFilter agrupa los filtros soportados por GET /accounts (RF-25).
 type AccountFilter struct {
@@ -49,6 +49,10 @@ type AccountRepository interface {
 	Deactivate(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*domain.Account, error)
 	List(ctx context.Context, filter AccountFilter) ([]domain.Account, error)
+	// ExistsByName verifica si ya existe una cuenta con ese nombre, para
+	// impedir duplicados en alta/edición. excludeID permite omitir la propia
+	// cuenta al validar una edición (nil en el alta).
+	ExistsByName(ctx context.Context, name string, excludeID *string) (bool, error)
 }
 
 // SnapshotFilter agrupa los filtros de GET /snapshots (RF-25).

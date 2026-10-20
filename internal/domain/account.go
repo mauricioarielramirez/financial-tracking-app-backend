@@ -8,7 +8,9 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"time"
+	"unicode"
 )
 
 // AccountType enumera los tipos de cuenta/activo soportados (RF-02).
@@ -62,14 +64,50 @@ type Account struct {
 }
 
 var (
-	ErrAccountNameRequired     = errors.New("el nombre de la cuenta es obligatorio")
-	ErrAccountTypeInvalid      = errors.New("tipo de cuenta inválido")
-	ErrAccountCurrencyRequired = errors.New("la moneda de la cuenta es obligatoria")
+	ErrAccountNameRequired     = errors.New("account name is required")
+	ErrAccountTypeInvalid      = errors.New("invalid account type")
+	ErrAccountCurrencyRequired = errors.New("account currency is required")
 )
 
-// Validate aplica las invariantes mínimas de una cuenta (RF-02).
-// Se llama tanto en alta como en edición, antes de persistir.
+// normalizeAccountName estandariza el nombre a Title Case (cada palabra con
+// su primera letra en mayúscula), p. ej. "cuenta de mercadopago ars" ->
+// "Cuenta De Mercadopago Ars". Las palabras que ya llegan en mayúsculas
+// (acrónimos o códigos de moneda escritos a mano, p. ej. "ARS", "USD") se
+// dejan intactas en lugar de forzarlas a minúscula.
+func normalizeAccountName(name string) string {
+	words := strings.Fields(name)
+	for i, w := range words {
+		if isAllUpper(w) {
+			continue
+		}
+		runes := []rune(strings.ToLower(w))
+		runes[0] = unicode.ToUpper(runes[0])
+		words[i] = string(runes)
+	}
+	return strings.Join(words, " ")
+}
+
+// isAllUpper es true si w tiene al menos una letra y ninguna está en
+// minúscula (así se detectan acrónimos/códigos de moneda escritos a mano).
+func isAllUpper(w string) bool {
+	hasLetter := false
+	for _, r := range w {
+		if unicode.IsLower(r) {
+			return false
+		}
+		if unicode.IsLetter(r) {
+			hasLetter = true
+		}
+	}
+	return hasLetter
+}
+
+// Validate normaliza el nombre a Title Case y aplica las invariantes
+// mínimas de una cuenta (RF-02). Se llama tanto en alta como en edición,
+// antes de persistir.
 func (a *Account) Validate() error {
+	a.Name = normalizeAccountName(a.Name)
+
 	if a.Name == "" {
 		return ErrAccountNameRequired
 	}

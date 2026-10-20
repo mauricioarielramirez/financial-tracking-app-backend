@@ -2,10 +2,15 @@ package account
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/domain"
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/repository"
 )
+
+// ErrDuplicateAccountName se devuelve cuando ya existe otra cuenta con el
+// mismo nombre (alta o edición).
+var ErrDuplicateAccountName = fmt.Errorf("%w: an account with that name already exists", repository.ErrConflict)
 
 // UseCase orquesta el repository de cuentas (RF-01 a RF-04). Para este
 // agregado no hace falta un service de cálculo puro: el único que aparece
@@ -27,6 +32,15 @@ func (uc *UseCase) Create(ctx context.Context, in CreateAccountInput) (AccountOu
 	if err := acc.Validate(); err != nil {
 		return AccountOutput{}, err
 	}
+
+	exists, err := uc.repo.ExistsByName(ctx, acc.Name, nil)
+	if err != nil {
+		return AccountOutput{}, err
+	}
+	if exists {
+		return AccountOutput{}, ErrDuplicateAccountName
+	}
+
 	if err := uc.repo.Create(ctx, &acc); err != nil {
 		return AccountOutput{}, err
 	}
@@ -40,9 +54,39 @@ func (uc *UseCase) Update(ctx context.Context, id string, in UpdateAccountInput)
 	}
 
 	uc.mapper.ApplyUpdate(in, acc)
+	return uc.validateAndSave(ctx, id, acc)
+}
+
+// Patch implementa PATCH /accounts/{id}: a diferencia de Update (reemplazo
+// completo), sólo pisa los campos presentes en el JSON (ver
+// PatchAccountInput); los ausentes conservan su valor actual.
+func (uc *UseCase) Patch(ctx context.Context, id string, in PatchAccountInput) (AccountOutput, error) {
+	acc, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return AccountOutput{}, err
+	}
+
+	uc.mapper.ApplyPatch(in, acc)
+	return uc.validateAndSave(ctx, id, acc)
+}
+
+// validateAndSave aplica las invariantes de dominio, verifica que el nombre
+// (ya normalizado por acc.Validate()) no choque con otra cuenta, y persiste.
+// Común a Update y Patch: ambos difieren sólo en qué campos pisan antes de
+// llegar acá.
+func (uc *UseCase) validateAndSave(ctx context.Context, id string, acc *domain.Account) (AccountOutput, error) {
 	if err := acc.Validate(); err != nil {
 		return AccountOutput{}, err
 	}
+
+	exists, err := uc.repo.ExistsByName(ctx, acc.Name, &id)
+	if err != nil {
+		return AccountOutput{}, err
+	}
+	if exists {
+		return AccountOutput{}, ErrDuplicateAccountName
+	}
+
 	if err := uc.repo.Update(ctx, acc); err != nil {
 		return AccountOutput{}, err
 	}

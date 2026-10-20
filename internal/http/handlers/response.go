@@ -35,7 +35,7 @@ type errorResponse struct {
 func writeError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
-		writeJSON(w, http.StatusNotFound, errorResponse{Error: "no encontrado"})
+		writeJSON(w, http.StatusNotFound, errorResponse{Error: "not found"})
 	case errors.Is(err, repository.ErrConflict):
 		writeJSON(w, http.StatusConflict, errorResponse{Error: err.Error()})
 	case errors.Is(err, domain.ErrAccountNameRequired),
@@ -46,6 +46,6 @@ func writeError(w http.ResponseWriter, err error) {
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
 	default:
 		log.Printf("error interno: %v", err)
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "error interno"})
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
 	}
 }

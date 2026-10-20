@@ -83,6 +83,24 @@ curl http://localhost:8080/api/v1/accounts
 curl http://localhost:8080/api/v1/quotes/suggested
 ```
 
+### Documentación de la API (Swagger / OpenAPI)
+
+Con el server corriendo, la documentación interactiva de todos los
+endpoints está en `http://localhost:8080/swagger/index.html` (el JSON crudo
+en `/swagger/doc.json`).
+
+Se genera con [swaggo/swag](https://github.com/swaggo/swag) a partir de
+anotaciones arriba de cada handler (`internal/http/handlers/*.go`) y de la
+anotación general en `cmd/api/main.go`. Los archivos generados
+(`docs/docs.go`, `docs/swagger.json`, `docs/swagger.yaml`) se versionan en
+el repo para no depender de la herramienta en cada build; cuando se agrega o
+cambia un endpoint hay que regenerarlos a mano:
+
+```bash
+go install github.com/swaggo/swag/cmd/swag@latest   # una sola vez
+swag init -g cmd/api/main.go --parseDependency --parseInternal -o docs
+```
+
 ### Nota sobre el driver de SQLite (CGO)
 
 Se usa `github.com/mattn/go-sqlite3`, que requiere CGO habilitado y un

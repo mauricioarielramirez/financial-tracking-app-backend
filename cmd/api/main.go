@@ -2,6 +2,13 @@
 // Cablea configuración, base de datos, repositorios, servicios, handlers y
 // middlewares. Es intencionalmente el único lugar que conoce todas las
 // piezas concretas del sistema.
+//
+//	@title			Financial Tracking App - Backend API
+//	@version		1.0
+//	@description	API backend para seguimiento de finanzas personales (cuentas, snapshots mensuales, cotizaciones).
+//
+// Nota: no se declara @BasePath porque /healthz vive fuera de /api/v1; cada
+// @Router de abajo incluye el prefijo completo que corresponde.
 package main
 
 import (
@@ -14,7 +21,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 
+	_ "github.com/mauricioarielramirez/financial-tracking-app-backend/docs"
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/config"
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/http/handlers"
 	appmiddleware "github.com/mauricioarielramirez/financial-tracking-app-backend/internal/http/middleware"
@@ -81,6 +90,7 @@ func main() {
 	router.Use(appmiddleware.CORS)
 
 	router.Get("/healthz", handlers.Health)
+	router.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	router.Route("/api/v1", func(api chi.Router) {
 		api.Use(appmiddleware.APIKey(cfg.APIKey))

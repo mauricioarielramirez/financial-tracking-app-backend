@@ -6,12 +6,12 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// IncomeStatement es el registro mensual de ingreso, gasto y ahorro,
-// con acumulado histórico (RF-17 a RF-20).
+// IncomeStatement is the monthly record of income, expenses, and savings,
+// with a historical cumulative total (RF-17 to RF-20).
 type IncomeStatement struct {
 	ID                   string
 	SnapshotID           *string
-	PeriodMonth          time.Time // día 1 del mes
+	PeriodMonth          time.Time // day 1 of the month
 	IncomeTotalARS       decimal.Decimal
 	ExpenseTotalARS      decimal.Decimal
 	SavingsARS           decimal.Decimal
@@ -20,11 +20,11 @@ type IncomeStatement struct {
 	IncomeTotalUSD       *decimal.Decimal
 }
 
-// Calculate deriva savings, savings_percentage e income_total_usd a partir de
-// los montos cargados y, si se provee, la cotización USD del snapshot
-// asociado (RF-18, RF-20). No toca CumulativeSavingsARS: eso requiere
-// conocer los períodos anteriores y se resuelve en la capa de servicio
-// (RF-19).
+// Calculate derives savings, savings_percentage, and income_total_usd from
+// the entered amounts and, if provided, the associated snapshot's USD
+// exchange rate (RF-18, RF-20). It doesn't touch CumulativeSavingsARS: that
+// requires knowing the previous periods and is resolved in the service
+// layer (RF-19).
 func (s *IncomeStatement) Calculate(usdRate *decimal.Decimal) {
 	s.SavingsARS = s.IncomeTotalARS.Sub(s.ExpenseTotalARS)
 	if s.IncomeTotalARS.IsPositive() {

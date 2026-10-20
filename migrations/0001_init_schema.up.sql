@@ -1,6 +1,6 @@
--- Esquema inicial. Escrito en SQL portable (sin AUTOINCREMENT fuera de PK,
--- sin tipos dinámicos de SQLite) para poder migrar a Postgres/MySQL sin
--- reescribir el modelo (Plan Técnico sección 1 y 3).
+-- Initial schema. Written in portable SQL (no AUTOINCREMENT outside the PK,
+-- no SQLite dynamic types) so it can be migrated to Postgres/MySQL without
+-- rewriting the model (Technical Plan sections 1 and 3).
 
 CREATE TABLE accounts (
     id              TEXT PRIMARY KEY,
@@ -22,17 +22,17 @@ CREATE TABLE snapshots (
     updated_at      TEXT NOT NULL
 );
 
--- RF-08: impedir más de un snapshot por mes salvo override explícito.
--- El override se resuelve en la capa de servicio (permite forzar el insert
--- eliminando primero el snapshot del mes si el usuario confirma); a nivel de
--- esquema se garantiza unicidad por fecha exacta.
+-- RF-08: prevent more than one snapshot per month unless explicitly
+-- overridden. The override is resolved in the service layer (it allows
+-- forcing the insert by first removing the month's snapshot if the user
+-- confirms); at the schema level, uniqueness is guaranteed by exact date.
 CREATE UNIQUE INDEX idx_snapshots_date ON snapshots (snapshot_date);
 
 CREATE TABLE exchange_rates (
     id              TEXT PRIMARY KEY,
     snapshot_id     TEXT NOT NULL REFERENCES snapshots (id) ON DELETE CASCADE,
     currency_code   TEXT NOT NULL,
-    rate_to_ars     TEXT NOT NULL, -- decimal almacenado como texto exacto (ver internal/domain)
+    rate_to_ars     TEXT NOT NULL, -- decimal stored as exact text (see internal/domain)
     source          TEXT NOT NULL,
     fetched_at      TEXT NOT NULL
 );

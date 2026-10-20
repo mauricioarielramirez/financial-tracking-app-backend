@@ -1,7 +1,7 @@
-// Package quotes encapsula el acceso a las APIs externas de cotización
-// (RF-06, RF-10, RF-11). La interfaz QuoteProvider es lo único que conoce
-// el resto del sistema: permite reemplazar de proveedor (o mockear en
-// tests) sin tocar servicios ni handlers (Plan Técnico sección 5).
+// Package quotes encapsulates access to the external exchange rate APIs
+// (RF-06, RF-10, RF-11). The QuoteProvider interface is the only thing the
+// rest of the system knows about: it allows swapping providers (or mocking
+// in tests) without touching services or handlers (Technical Plan section 5).
 package quotes
 
 import (
@@ -10,17 +10,17 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// SupportedCryptos son los símbolos cripto contemplados en esta primera
-// versión (ver Requerimientos Funcionales, sección 4).
+// SupportedCryptos are the crypto symbols covered in this first version
+// (see Functional Requirements, section 4).
 var SupportedCryptos = []string{"BTC", "ETH", "DAI", "USDT"}
 
-// QuoteProvider agrupa la obtención de cotizaciones sugeridas. Una
-// implementación puede delegar en una o más APIs externas (DolarAPI para
-// USD, CoinGecko para cripto) o, en tests, devolver valores fijos.
+// QuoteProvider groups fetching suggested exchange rates. An implementation
+// can delegate to one or more external APIs (DolarAPI for USD, CoinGecko
+// for crypto) or, in tests, return fixed values.
 type QuoteProvider interface {
-	// GetUSDRate devuelve la cotización ARS por 1 USD sugerida (RF-06).
+	// GetUSDRate returns the suggested ARS-per-1-USD rate (RF-06).
 	GetUSDRate(ctx context.Context) (decimal.Decimal, error)
-	// GetCryptoRate devuelve la cotización ARS por 1 unidad del símbolo
-	// dado (p. ej. "BTC"). symbol debe ser uno de SupportedCryptos.
+	// GetCryptoRate returns the ARS rate for 1 unit of the given symbol
+	// (e.g. "BTC"). symbol must be one of SupportedCryptos.
 	GetCryptoRate(ctx context.Context, symbol string) (decimal.Decimal, error)
 }

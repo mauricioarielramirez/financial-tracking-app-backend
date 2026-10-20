@@ -1,14 +1,14 @@
-// Package quote contiene el usecase de cotizaciones sugeridas (RF-10,
-// RF-11). No tiene mapper: a diferencia de account, acá no hay una entidad
-// de domain involucrada (las cotizaciones externas ya llegan como
-// decimal.Decimal desde internal/quotes), así que el Output se arma
-// directo en el usecase.
+// Package quote contains the suggested exchange rates usecase (RF-10,
+// RF-11). It has no mapper: unlike account, there's no domain entity
+// involved here (external exchange rates already arrive as
+// decimal.Decimal from internal/quotes), so the Output is built directly
+// in the usecase.
 package quote
 
 import "github.com/shopspring/decimal"
 
-// SuggestedOutput es la respuesta de GET /quotes/suggested: el cliente
-// confirma o edita estos valores antes de crear el snapshot (RF-11).
+// SuggestedOutput is the response of GET /quotes/suggested: the client
+// confirms or edits these values before creating the snapshot (RF-11).
 type SuggestedOutput struct {
 	USD          *decimal.Decimal           `json:"usd,omitempty"`
 	USDErr       string                     `json:"usd_error,omitempty"`

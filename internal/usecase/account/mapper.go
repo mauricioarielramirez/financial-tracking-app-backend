@@ -4,29 +4,35 @@ import "github.com/mauricioarielramirez/financial-tracking-app-backend/internal/
 
 //go:generate mockgen -source=mapper.go -destination=mapper_mock_test.go -package=account
 
-// Mapper traduce domain.Account ⇄ los DTO de este paquete. Es una interfaz
-// (y no funciones sueltas) para que UseCase pueda testearse con un mapper
-// falso/mockeado sin ejecutar la lógica real de mapeo, y para que el mapper
-// real pueda testearse por su cuenta.
+// Mapper translates domain.Account ⇄ this package's DTOs. It's an
+// interface (not loose functions) so UseCase can be tested with a
+// fake/mocked mapper without running the real mapping logic, and so the
+// real mapper can be tested on its own.
 type Mapper interface {
-	// ToDomain arma una cuenta nueva a partir del alta (RF-01). No setea
-	// ID/IsActive/CreatedAt/UpdatedAt: esos los completa el repository al
-	// persistir.
+	// ToDomain builds a new account from the create input (RF-01). It
+	// doesn't set ID/IsActive/CreatedAt/UpdatedAt: the repository fills
+	// those in on persist.
 	ToDomain(in CreateAccountInput) domain.Account
 
-	// ApplyUpdate aplica los campos editables de UpdateAccountInput sobre
-	// una cuenta ya existente, sin tocar ID, IsActive ni los timestamps.
+	// ApplyUpdate applies UpdateAccountInput's editable fields onto an
+	// already-existing account, without touching ID, IsActive, or the
+	// timestamps.
 	ApplyUpdate(in UpdateAccountInput, acc *domain.Account)
+
+	// ApplyPatch applies only the present (non-nil) fields of
+	// PatchAccountInput onto an already-existing account; absent fields
+	// keep their current value.
+	ApplyPatch(in PatchAccountInput, acc *domain.Account)
 
 	ToOutput(a domain.Account) AccountOutput
 	ToOutputList(accounts []domain.Account) []AccountOutput
 }
 
-// mapper es la única implementación real de Mapper. No tiene estado ni
-// dependencias, así que un valor cero (mapper{}) alcanza.
+// mapper is Mapper's only real implementation. It has no state or
+// dependencies, so a zero value (mapper{}) is enough.
 type mapper struct{}
 
-// NewMapper construye el mapper real de cuentas.
+// NewMapper builds the real account mapper.
 func NewMapper() Mapper {
 	return mapper{}
 }
@@ -47,6 +53,24 @@ func (mapper) ApplyUpdate(in UpdateAccountInput, acc *domain.Account) {
 	acc.Currency = domain.Currency(in.Currency)
 	acc.ProviderGroup = in.ProviderGroup
 	acc.IsInvested = in.IsInvested
+}
+
+func (mapper) ApplyPatch(in PatchAccountInput, acc *domain.Account) {
+	if in.Name != nil {
+		acc.Name = *in.Name
+	}
+	if in.Type != nil {
+		acc.Type = domain.AccountType(*in.Type)
+	}
+	if in.Currency != nil {
+		acc.Currency = domain.Currency(*in.Currency)
+	}
+	if in.ProviderGroup != nil {
+		acc.ProviderGroup = in.ProviderGroup
+	}
+	if in.IsInvested != nil {
+		acc.IsInvested = *in.IsInvested
+	}
 }
 
 func (mapper) ToOutput(a domain.Account) AccountOutput {

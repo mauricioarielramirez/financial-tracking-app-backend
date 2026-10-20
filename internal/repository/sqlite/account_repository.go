@@ -14,19 +14,19 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/repository"
 )
 
-// AccountRepository implementa repository.AccountRepository sobre SQLite,
-// usando database/sql directamente (sin query builder) para no sumar
-// dependencias adicionales.
+// AccountRepository implements repository.AccountRepository over SQLite,
+// using database/sql directly (no query builder) to avoid adding extra
+// dependencies.
 type AccountRepository struct {
 	db *sql.DB
 }
 
-// NewAccountRepository construye el repositorio de cuentas.
+// NewAccountRepository builds the account repository.
 func NewAccountRepository(db *sql.DB) *AccountRepository {
 	return &AccountRepository{db: db}
 }
 
-// compile-time check: AccountRepository debe cumplir la interfaz del dominio.
+// compile-time check: AccountRepository must satisfy the domain interface.
 var _ repository.AccountRepository = (*AccountRepository)(nil)
 
 const accountColumns = "id, name, type, currency, provider_group, is_invested, is_active, created_at, updated_at"
@@ -39,7 +39,7 @@ func (r *AccountRepository) Create(ctx context.Context, account *domain.Account)
 	account.CreatedAt = now
 	account.UpdatedAt = now
 	if !account.IsActive {
-		account.IsActive = true // por defecto una cuenta nueva está activa (RF-01)
+		account.IsActive = true // a new account is active by default (RF-01)
 	}
 
 	_, err := r.db.ExecContext(ctx, `
@@ -51,7 +51,7 @@ func (r *AccountRepository) Create(ctx context.Context, account *domain.Account)
 		account.CreatedAt.Format(time.RFC3339Nano), account.UpdatedAt.Format(time.RFC3339Nano),
 	)
 	if err != nil {
-		return fmt.Errorf("insertando cuenta: %w", err)
+		return fmt.Errorf("inserting account: %w", err)
 	}
 	return nil
 }
@@ -68,19 +68,19 @@ func (r *AccountRepository) Update(ctx context.Context, account *domain.Account)
 		account.UpdatedAt.Format(time.RFC3339Nano), account.ID,
 	)
 	if err != nil {
-		return fmt.Errorf("actualizando cuenta %s: %w", account.ID, err)
+		return fmt.Errorf("updating account %s: %w", account.ID, err)
 	}
 	return checkRowsAffected(res)
 }
 
-// Deactivate hace soft delete (RF-04): el registro y su historial de saldos
-// asociados en account_balances se conservan intactos.
+// Deactivate does a soft delete (RF-04): the record and its associated
+// balance history in account_balances are kept intact.
 func (r *AccountRepository) Deactivate(ctx context.Context, id string) error {
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE accounts SET is_active = 0, updated_at = ? WHERE id = ?
 	`, time.Now().UTC().Format(time.RFC3339Nano), id)
 	if err != nil {
-		return fmt.Errorf("desactivando cuenta %s: %w", id, err)
+		return fmt.Errorf("deactivating account %s: %w", id, err)
 	}
 	return checkRowsAffected(res)
 }
@@ -92,7 +92,7 @@ func (r *AccountRepository) GetByID(ctx context.Context, id string) (*domain.Acc
 		return nil, repository.ErrNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("buscando cuenta %s: %w", id, err)
+		return nil, fmt.Errorf("fetching account %s: %w", id, err)
 	}
 	return acc, nil
 }
@@ -116,7 +116,7 @@ func (r *AccountRepository) List(ctx context.Context, filter repository.AccountF
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("listando cuentas: %w", err)
+		return nil, fmt.Errorf("listing accounts: %w", err)
 	}
 	defer rows.Close()
 
@@ -124,7 +124,7 @@ func (r *AccountRepository) List(ctx context.Context, filter repository.AccountF
 	for rows.Next() {
 		acc, err := scanAccount(rows)
 		if err != nil {
-			return nil, fmt.Errorf("leyendo cuenta: %w", err)
+			return nil, fmt.Errorf("reading account: %w", err)
 		}
 		accounts = append(accounts, *acc)
 	}
@@ -134,8 +134,31 @@ func (r *AccountRepository) List(ctx context.Context, filter repository.AccountF
 	return accounts, nil
 }
 
-// rowScanner abstrae *sql.Row y *sql.Rows, que comparten el método Scan
-// pero no una interfaz común en la stdlib.
+// ExistsByName checks whether an account with that name already exists
+// (RF-01/RF-02). excludeID is used on edit so the account isn't compared
+// against itself.
+func (r *AccountRepository) ExistsByName(ctx context.Context, name string, excludeID *string) (bool, error) {
+	query := "SELECT 1 FROM accounts WHERE name = ?"
+	args := []interface{}{name}
+	if excludeID != nil {
+		query += " AND id != ?"
+		args = append(args, *excludeID)
+	}
+	query += " LIMIT 1"
+
+	var exists int
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("checking account name %q: %w", name, err)
+	}
+	return true, nil
+}
+
+// rowScanner abstracts *sql.Row and *sql.Rows, which share the Scan method
+// but no common interface in the stdlib.
 type rowScanner interface {
 	Scan(dest ...interface{}) error
 }
@@ -183,10 +206,10 @@ func checkRowsAffected(res sql.Result) error {
 	return nil
 }
 
-// isUniqueConstraintErr detecta violaciones de UNIQUE de forma independiente
-// del driver (texto del error). Queda disponible para los próximos
-// repositorios (snapshots, income_statements), que sí ejercitan RF-08 y
-// RF-19 contra restricciones únicas.
+// isUniqueConstraintErr detects UNIQUE violations in a driver-independent
+// way (by matching the error text). It's left available for the upcoming
+// repositories (snapshots, income_statements), which do exercise RF-08 and
+// RF-19 against unique constraints.
 func isUniqueConstraintErr(err error) bool {
 	if err == nil {
 		return false

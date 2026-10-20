@@ -8,10 +8,10 @@ import (
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/quotes"
 )
 
-// UseCase orquesta la consulta a las APIs externas de cotización (RF-10)
-// sin bloquear al usuario si alguna falla (Plan Técnico sección 5): cada
-// cotización se resuelve de forma independiente y los errores viajan junto
-// a la respuesta en vez de abortar todo el pedido.
+// UseCase orchestrates querying the external exchange rate APIs (RF-10)
+// without blocking the user if one of them fails (Technical Plan section
+// 5): each rate is resolved independently and errors travel alongside the
+// response instead of aborting the whole request.
 type UseCase struct {
 	provider quotes.QuoteProvider
 }

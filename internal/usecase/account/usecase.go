@@ -2,21 +2,26 @@ package account
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/domain"
 	"github.com/mauricioarielramirez/financial-tracking-app-backend/internal/repository"
 )
 
-// UseCase orquesta el repository de cuentas (RF-01 a RF-04). Para este
-// agregado no hace falta un service de cálculo puro: el único que aparece
-// más adelante es el de snapshots (distribución %, posición consolidada).
+// ErrDuplicateAccountName is returned when another account already exists
+// with the same name (on create or edit).
+var ErrDuplicateAccountName = fmt.Errorf("%w: an account with that name already exists", repository.ErrConflict)
+
+// UseCase orchestrates the account repository (RF-01 to RF-04). This
+// aggregate doesn't need a pure-calculation service: the only one that
+// shows up later is snapshots' (% distribution, consolidated position).
 type UseCase struct {
 	repo   repository.AccountRepository
 	mapper Mapper
 }
 
-// New construye el usecase. repo y mapper son interfaces: en los tests se
-// reemplazan por mocks generados con gomock (ver mapper.go y
+// New builds the usecase. repo and mapper are interfaces: in tests they're
+// swapped for mocks generated with gomock (see mapper.go and
 // internal/repository/repository.go).
 func New(repo repository.AccountRepository, mapper Mapper) *UseCase {
 	return &UseCase{repo: repo, mapper: mapper}
@@ -27,6 +32,15 @@ func (uc *UseCase) Create(ctx context.Context, in CreateAccountInput) (AccountOu
 	if err := acc.Validate(); err != nil {
 		return AccountOutput{}, err
 	}
+
+	exists, err := uc.repo.ExistsByName(ctx, acc.Name, nil)
+	if err != nil {
+		return AccountOutput{}, err
+	}
+	if exists {
+		return AccountOutput{}, ErrDuplicateAccountName
+	}
+
 	if err := uc.repo.Create(ctx, &acc); err != nil {
 		return AccountOutput{}, err
 	}
@@ -40,17 +54,47 @@ func (uc *UseCase) Update(ctx context.Context, id string, in UpdateAccountInput)
 	}
 
 	uc.mapper.ApplyUpdate(in, acc)
+	return uc.validateAndSave(ctx, id, acc)
+}
+
+// Patch implements PATCH /accounts/{id}: unlike Update (a full replace),
+// it only overwrites the fields present in the JSON (see
+// PatchAccountInput); absent ones keep their current value.
+func (uc *UseCase) Patch(ctx context.Context, id string, in PatchAccountInput) (AccountOutput, error) {
+	acc, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return AccountOutput{}, err
+	}
+
+	uc.mapper.ApplyPatch(in, acc)
+	return uc.validateAndSave(ctx, id, acc)
+}
+
+// validateAndSave applies the domain invariants, checks that the name
+// (already normalized by acc.Validate()) doesn't collide with another
+// account, and persists. Shared by Update and Patch: both only differ in
+// which fields they overwrite before getting here.
+func (uc *UseCase) validateAndSave(ctx context.Context, id string, acc *domain.Account) (AccountOutput, error) {
 	if err := acc.Validate(); err != nil {
 		return AccountOutput{}, err
 	}
+
+	exists, err := uc.repo.ExistsByName(ctx, acc.Name, &id)
+	if err != nil {
+		return AccountOutput{}, err
+	}
+	if exists {
+		return AccountOutput{}, ErrDuplicateAccountName
+	}
+
 	if err := uc.repo.Update(ctx, acc); err != nil {
 		return AccountOutput{}, err
 	}
 	return uc.mapper.ToOutput(*acc), nil
 }
 
-// Deactivate hace soft delete (RF-04): el histórico de saldos ya cargados
-// para esta cuenta se conserva sin cambios (lo garantiza el repository).
+// Deactivate does a soft delete (RF-04): this account's already-loaded
+// balance history is kept unchanged (the repository guarantees this).
 func (uc *UseCase) Deactivate(ctx context.Context, id string) error {
 	return uc.repo.Deactivate(ctx, id)
 }

@@ -10,19 +10,20 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// DolarAPIClient consulta https://dolarapi.com para la cotización del dólar
-// (RF-06, RF-10). El tipo de dólar (oficial/blue/...) y el campo
-// (compra/venta) son configurables (Plan Técnico sección 5) para poder
-// cambiarlos sin tocar código.
+// DolarAPIClient queries https://dolarapi.com for the dollar exchange rate
+// (RF-06, RF-10). The dollar type (oficial/blue/...) and the field
+// (compra/venta, i.e. buy/sell) are configurable (Technical Plan section 5)
+// so they can be changed without touching code.
 type DolarAPIClient struct {
-	BaseURL string // p. ej. "https://dolarapi.com/v1"
-	Tipo    string // p. ej. "oficial"
-	Campo   string // "compra" | "venta"
+	BaseURL string // e.g. "https://dolarapi.com/v1"
+	Tipo    string // e.g. "oficial" (official rate)
+	Campo   string // "compra" (buy) | "venta" (sell)
 	Client  *http.Client
 }
 
-// NewDolarAPIClient arma el cliente con un timeout acorde al configurado
-// (Plan Técnico sección 5: no bloquear al usuario si la API externa tarda).
+// NewDolarAPIClient builds the client with a timeout matching the
+// configured one (Technical Plan section 5: don't block the user if the
+// external API is slow).
 func NewDolarAPIClient(baseURL, tipo, campo string, timeout time.Duration) *DolarAPIClient {
 	return &DolarAPIClient{
 		BaseURL: baseURL,
@@ -40,7 +41,7 @@ type dolarAPIResponse struct {
 	FechaActualizacion string  `json:"fechaActualizacion"`
 }
 
-// GetUSDRate implementa quotes.QuoteProvider.
+// GetUSDRate implements quotes.QuoteProvider.
 func (c *DolarAPIClient) GetUSDRate(ctx context.Context) (decimal.Decimal, error) {
 	url := fmt.Sprintf("%s/dolares/%s", c.BaseURL, c.Tipo)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -50,17 +51,17 @@ func (c *DolarAPIClient) GetUSDRate(ctx context.Context) (decimal.Decimal, error
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("consultando DolarAPI: %w", err)
+		return decimal.Zero, fmt.Errorf("querying DolarAPI: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return decimal.Zero, fmt.Errorf("DolarAPI devolvió status %d", resp.StatusCode)
+		return decimal.Zero, fmt.Errorf("DolarAPI returned status %d", resp.StatusCode)
 	}
 
 	var body dolarAPIResponse
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return decimal.Zero, fmt.Errorf("decodificando respuesta de DolarAPI: %w", err)
+		return decimal.Zero, fmt.Errorf("decoding DolarAPI response: %w", err)
 	}
 
 	var value float64
@@ -74,10 +75,10 @@ func (c *DolarAPIClient) GetUSDRate(ctx context.Context) (decimal.Decimal, error
 	return decimal.NewFromFloat(value), nil
 }
 
-// GetCryptoRate: DolarAPIClient sólo resuelve USD; delega el resto a
-// CoinGeckoClient. Devuelve un error explícito si se lo llama igual, para
-// que quede claro en tiempo de ejecución que hay que usar el proveedor
-// correcto (ver CompositeProvider más abajo).
+// GetCryptoRate: DolarAPIClient only resolves USD; the rest is delegated to
+// CoinGeckoClient. It returns an explicit error if called anyway, so it's
+// clear at runtime that the correct provider needs to be used (see
+// CompositeProvider below).
 func (c *DolarAPIClient) GetCryptoRate(ctx context.Context, symbol string) (decimal.Decimal, error) {
-	return decimal.Zero, fmt.Errorf("DolarAPIClient no provee cotizaciones cripto (símbolo %q); usar CoinGeckoClient", symbol)
+	return decimal.Zero, fmt.Errorf("DolarAPIClient does not provide crypto rates (symbol %q); use CoinGeckoClient", symbol)
 }

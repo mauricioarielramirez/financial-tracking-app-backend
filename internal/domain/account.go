@@ -1,17 +1,20 @@
-// Package domain contiene las entidades y reglas de negocio puras del sistema.
-// No depende de HTTP, SQL concreto, JSON ni de ningún framework: son structs
-// simples más las invariantes/validaciones propias del dominio (RF-01 a
-// RF-04). Ni tags `json` ni `db`: la traducción a esos formatos es
-// responsabilidad de quien los consume (mapper en internal/usecase/*, o el
-// propio repository en internal/repository/sqlite), nunca del dominio.
+// Package domain contains the system's pure entities and business rules.
+// It doesn't depend on HTTP, any concrete SQL, JSON, or any framework: just
+// plain structs plus the domain's own invariants/validations (RF-01 to
+// RF-04). No `json` or `db` tags: translating to those formats is the
+// responsibility of whoever consumes them (a mapper in internal/usecase/*,
+// or the repository itself in internal/repository/sqlite), never the
+// domain's.
 package domain
 
 import (
 	"errors"
+	"strings"
 	"time"
+	"unicode"
 )
 
-// AccountType enumera los tipos de cuenta/activo soportados (RF-02).
+// AccountType enumerates the supported account/asset types (RF-02).
 type AccountType string
 
 const (
@@ -24,7 +27,7 @@ const (
 	AccountTypeOther          AccountType = "other"
 )
 
-// ValidAccountTypes lista los tipos aceptados, usada para validar altas/ediciones.
+// ValidAccountTypes lists the accepted types, used to validate creates/edits.
 var ValidAccountTypes = map[AccountType]bool{
 	AccountTypeBank:           true,
 	AccountTypeWallet:         true,
@@ -35,7 +38,7 @@ var ValidAccountTypes = map[AccountType]bool{
 	AccountTypeOther:          true,
 }
 
-// Currency identifica la moneda de origen de una cuenta (RF-02).
+// Currency identifies an account's source currency (RF-02).
 type Currency string
 
 const (
@@ -47,8 +50,8 @@ const (
 	CurrencyUSDT Currency = "USDT"
 )
 
-// Account representa una cuenta/activo financiero definido dinámicamente
-// por el usuario (RF-01 a RF-04).
+// Account represents a financial account/asset dynamically defined by the
+// user (RF-01 to RF-04).
 type Account struct {
 	ID            string
 	Name          string
@@ -62,14 +65,50 @@ type Account struct {
 }
 
 var (
-	ErrAccountNameRequired     = errors.New("el nombre de la cuenta es obligatorio")
-	ErrAccountTypeInvalid      = errors.New("tipo de cuenta inválido")
-	ErrAccountCurrencyRequired = errors.New("la moneda de la cuenta es obligatoria")
+	ErrAccountNameRequired     = errors.New("account name is required")
+	ErrAccountTypeInvalid      = errors.New("invalid account type")
+	ErrAccountCurrencyRequired = errors.New("account currency is required")
 )
 
-// Validate aplica las invariantes mínimas de una cuenta (RF-02).
-// Se llama tanto en alta como en edición, antes de persistir.
+// normalizeAccountName standardizes the name to Title Case (each word with
+// its first letter capitalized), e.g. "cuenta de mercadopago ars" ->
+// "Cuenta De Mercadopago Ars". Words that already arrive fully uppercase
+// (acronyms or currency codes typed by hand, e.g. "ARS", "USD") are left
+// untouched instead of being forced to lowercase.
+func normalizeAccountName(name string) string {
+	words := strings.Fields(name)
+	for i, w := range words {
+		if isAllUpper(w) {
+			continue
+		}
+		runes := []rune(strings.ToLower(w))
+		runes[0] = unicode.ToUpper(runes[0])
+		words[i] = string(runes)
+	}
+	return strings.Join(words, " ")
+}
+
+// isAllUpper is true if w has at least one letter and none of them are
+// lowercase (this is how hand-typed acronyms/currency codes are detected).
+func isAllUpper(w string) bool {
+	hasLetter := false
+	for _, r := range w {
+		if unicode.IsLower(r) {
+			return false
+		}
+		if unicode.IsLetter(r) {
+			hasLetter = true
+		}
+	}
+	return hasLetter
+}
+
+// Validate normalizes the name to Title Case and applies an account's
+// minimum invariants (RF-02). It's called on both create and edit, before
+// persisting.
 func (a *Account) Validate() error {
+	a.Name = normalizeAccountName(a.Name)
+
 	if a.Name == "" {
 		return ErrAccountNameRequired
 	}

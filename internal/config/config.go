@@ -1,6 +1,6 @@
-// Package config centraliza la carga de configuración desde variables de
-// entorno (y un archivo .env opcional vía godotenv), tal como define el Plan
-// Técnico sección 2: nada de configuración hardcodeada en el código.
+// Package config centralizes loading configuration from environment
+// variables (and an optional .env file via godotenv), as defined in the
+// Technical Plan section 2: no hardcoded configuration in the code.
 package config
 
 import (
@@ -11,49 +11,49 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config agrupa toda la configuración de la aplicación.
+// Config groups together all of the application's configuration.
 type Config struct {
-	// HTTPPort es el puerto en el que escucha el servidor HTTP.
+	// HTTPPort is the port the HTTP server listens on.
 	HTTPPort string
 
-	// DBDriver selecciona el motor de base de datos: "sqlite3" por ahora;
-	// "postgres" / "mysql" quedan previstos para cuando se migre (ver Plan
-	// Técnico sección 1 y 10).
+	// DBDriver selects the database engine: "sqlite3" for now;
+	// "postgres" / "mysql" are planned for when the migration happens (see
+	// Technical Plan sections 1 and 10).
 	DBDriver string
-	// DBDSN es el data source name / connection string del motor elegido.
-	// Para sqlite es la ruta al archivo, p. ej. "./finance.db".
+	// DBDSN is the data source name / connection string for the chosen
+	// engine. For sqlite it's the path to the file, e.g. "./finance.db".
 	DBDSN string
 
-	// MigrationsPath apunta al directorio con los archivos .up.sql/.down.sql.
+	// MigrationsPath points to the directory with the .up.sql/.down.sql files.
 	MigrationsPath string
 
-	// APIKey, si se define, habilita autenticación simple por header
-	// (RNF-01) cuando el backend se expone fuera de localhost. Vacío = sin
-	// autenticación (uso local).
+	// APIKey, if set, enables simple header-based authentication (RNF-01)
+	// when the backend is exposed outside localhost. Empty = no
+	// authentication (local use).
 	APIKey string
 
-	// DolarAPIBaseURL y campos relacionados controlan qué cotización de
-	// dólar se usa por defecto, sin tocar código (Plan Técnico sección 5).
+	// DolarAPIBaseURL and related fields control which dollar exchange rate
+	// is used by default, without touching code (Technical Plan section 5).
 	DolarAPIBaseURL string
-	DolarTipo       string // p. ej. "oficial"
-	DolarCampo      string // p. ej. "venta"
+	DolarTipo       string // e.g. "oficial" (official rate)
+	DolarCampo      string // e.g. "venta" (sell rate)
 
 	CoinGeckoBaseURL string
 
-	// ExternalAPITimeout limita cuánto se espera a las APIs externas de
-	// cotización antes de degradar a carga manual (Plan Técnico sección 5).
+	// ExternalAPITimeout limits how long to wait for external exchange rate
+	// APIs before falling back to manual entry (Technical Plan section 5).
 	ExternalAPITimeout time.Duration
 
-	// GoogleServiceAccountFile es la ruta al JSON de credenciales para
-	// cmd/import (RF-09). Nunca se versiona en el repo.
+	// GoogleServiceAccountFile is the path to the credentials JSON for
+	// cmd/import (RF-09). Never committed to the repo.
 	GoogleServiceAccountFile string
 }
 
-// Load lee un archivo .env si existe (no es un error que falte) y luego
-// arma la configuración a partir de variables de entorno, aplicando
-// defaults razonables para desarrollo local.
+// Load reads a .env file if it exists (it's not an error if it's missing)
+// and then builds the configuration from environment variables, applying
+// sensible defaults for local development.
 func Load() (*Config, error) {
-	_ = godotenv.Load() // .env es opcional; si no existe, se sigue con el entorno tal cual
+	_ = godotenv.Load() // .env is optional; if it doesn't exist, proceed with the environment as-is
 
 	cfg := &Config{
 		HTTPPort:                 getEnv("HTTP_PORT", "8080"),

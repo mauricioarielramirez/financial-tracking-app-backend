@@ -7,9 +7,9 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// CompositeProvider combina un proveedor de USD y uno de cripto detrás de
-// una única implementación de QuoteProvider, que es lo que consume el
-// resto del sistema (Plan Técnico sección 5).
+// CompositeProvider combines a USD provider and a crypto provider behind a
+// single QuoteProvider implementation, which is what the rest of the
+// system consumes (Technical Plan section 5).
 type CompositeProvider struct {
 	usdProvider    QuoteProvider
 	cryptoProvider QuoteProvider
